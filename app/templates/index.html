@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1 class="mb-3">Latest Fragrance Reviews</h1>
+    {% for post in posts %}
+        <article class="media content-section">
+          <div class="media-body">
+            <div class="article-metadata">
+              <a class="mr-2" href="#">{{ post.author.username }}</a> {# Add link to user profile later if needed #}
+              <small class="text-muted">{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }} UTC</small> {# Format timestamp #}
+            </div>
+            <h2><a class="article-title" href="{{ url_for('main.post', post_id=post.id) }}">{{ post.title }}</a></h2>
+            <p class="article-content">{{ post.body[:250] }}...</p> {# Show snippet #}
+          </div>
+        </article>
+    {% else %}
+        <p>No posts yet!</p>
+    {% endfor %}
+
+    {# Pagination Links #}
+    <nav aria-label="Page navigation">
+      <ul class="pagination justify-content-center">
+        {% if prev_url %}
+          <li class="page-item"><a class="page-link" href="{{ prev_url }}">Previous</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+        {% if next_url %}
+          <li class="page-item"><a class="page-link" href="{{ next_url }}">Next</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+{% endblock %}

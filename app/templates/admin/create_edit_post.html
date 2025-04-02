@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="content-section">
+        <form method="POST" action="">
+            {{ form.hidden_tag() }} {# CSRF token #}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">{{ legend }}</legend> {# Use legend variable #}
+                <div class="form-floating mb-3">
+                    {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Title") }}
+                    {{ form.title.label(class="form-label") }}
+                     {% if form.title.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.title.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-floating mb-3">
+                    {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""), placeholder="Content", style="height: 200px") }} {# Make textarea larger #}
+                    {{ form.body.label(class="form-label") }}
+                     {% if form.body.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.body.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </fieldset>
+            <div class="form-group mb-3">
+                {{ form.submit(class="btn btn-outline-info") }}
+                <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
