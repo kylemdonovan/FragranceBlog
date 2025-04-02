@@ -3,7 +3,7 @@ from datetime import datetime, timezone # Use timezone-aware datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import db, login # Import db and login from app package __init__
-
+from slugify import slugify as default_slugify
 # Flask-Login user loader callback
 @login.user_loader
 def load_user(id):
@@ -32,12 +32,29 @@ class User(UserMixin, db.Model):
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(140), nullable=False)
+    # --- ADD THIS LINE ---
+    slug = db.Column(db.String(150), unique=True, index=True, nullable=False) # Length slightly > title
+    # -------------------
     body = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, index=True, default=lambda: datetime.now(timezone.utc))
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # FK links to User table
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     # Relationships
-    comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan') # Cascade delete comments
+    comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+
+    # --- ADD THIS HELPER METHOD ---
+    # Automatically generate slug before saving (can be called explicitly)
+    @staticmethod
+    def generate_unique_slug(title):
+        base_slug = default_slugify(title)
+        slug = base_slug
+        counter = 1
+        # Check if slug already exists in the DB
+        while Post.query.filter_by(slug=slug).first():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        return slug
+    # ----------------------------
 
     def __repr__(self):
         return f'<Post {self.title}>'
