@@ -28,28 +28,37 @@ def index():
     return render_template('index.html', title='Home', posts=posts.items,
                            next_url=next_url, prev_url=prev_url)
 
-@bp.route('/post/<int:post_id>', methods=['GET', 'POST'])
-def post(post_id):
-    post_obj = db.get_or_404(Post, post_id) # Use get_or_404 for cleaner handling
+@bp.route('/post/<string:slug>', methods=['GET', 'POST']) # Changed from <int:post_id>
+def post(slug): # Changed argument name
+    # Query by slug instead of id
+    post_obj = db.session.scalar(sa.select(Post).filter_by(slug=slug))
+    if post_obj is None:
+        flash(f'Post "{slug}" not found.', 'warning')
+        return redirect(url_for('main.index')) # Or render a 404 template
+
     form = CommentForm()
-    if form.validate_on_submit() and current_user.is_authenticated: # Check login for comments
+    if form.validate_on_submit() and current_user.is_authenticated:
         comment = Comment(body=form.body.data, commenter=current_user, post=post_obj)
         db.session.add(comment)
         db.session.commit()
         flash('Your comment has been published.', 'success')
-        return redirect(url_for('main.post', post_id=post_id)) # Redirect to clear form
+        return redirect(url_for('main.post', slug=post_obj.slug)) # Redirect using slug
     elif form.validate_on_submit() and not current_user.is_authenticated:
          flash('You must be logged in to comment.', 'warning')
-         return redirect(url_for('main.login', next=url_for('main.post', post_id=post_id)))
+         # Redirect to login, passing the current post's slug URL as 'next'
+         return redirect(url_for('main.login', next=url_for('main.post', slug=post_obj.slug)))
 
-    # Fetch comments for the post, newest first
+    # Fetch comments for the post
     page = request.args.get('page', 1, type=int)
-    comments_query = post_obj.comments.select().order_by(Comment.timestamp.desc())
+    # Use post_obj relationship directly
+    comments_query = sa.select(Comment).where(Comment.post_id == post_obj.id).order_by(Comment.timestamp.desc())
     comments = db.paginate(comments_query, page=page, per_page=10, error_out=False)
 
-    next_url = url_for('main.post', post_id=post_id, page=comments.next_num) if comments.has_next else None
-    prev_url = url_for('main.post', post_id=post_id, page=comments.prev_num) if comments.has_prev else None
+    # Pass slug to url_for for pagination links
+    next_url = url_for('main.post', slug=slug, page=comments.next_num) if comments.has_next else None
+    prev_url = url_for('main.post', slug=slug, page=comments.prev_num) if comments.has_prev else None
 
+    # Pass post_obj which now includes the slug implicitly
     return render_template('post.html', title=post_obj.title, post=post_obj, form=form,
                            comments=comments.items, next_url=next_url, prev_url=prev_url)
 
@@ -142,37 +151,45 @@ def admin_dashboard():
 def create_post():
     form = PostForm()
     if form.validate_on_submit():
-        post = Post(title=form.title.data, body=form.body.data, author=current_user)
+        # Generate the unique slug from the title
+        new_slug = Post.generate_unique_slug(form.title.data)
+        post = Post(title=form.title.data,
+                    body=form.body.data,
+                    author=current_user,
+                    slug=new_slug) # Add slug here
         db.session.add(post)
         db.session.commit()
         flash('Your post has been created!', 'success')
-        return redirect(url_for('main.admin_dashboard')) # Redirect to admin dashboard
+        return redirect(url_for('main.admin_dashboard'))
     return render_template('admin/create_edit_post.html', title='Create New Post', form=form, legend='New Post')
 
-@bp.route('/admin/post/<int:post_id>/edit', methods=['GET', 'POST'])
+@bp.route('/admin/post/<int:post_id>/edit', methods=['GET', 'POST']) # Keep ID for editing lookup
 @admin_required
 def edit_post(post_id):
     post = db.get_or_404(Post, post_id)
-    # Optional: Add check if current_user == post.author if needed, but admin should override
     form = PostForm()
-    if form.validate_on_submit(): # Data submitted via POST
+    if form.validate_on_submit():
+        original_title = post.title
         post.title = form.title.data
         post.body = form.body.data
+        # Regenerate slug ONLY if the title has changed
+        if post.title != original_title:
+            post.slug = Post.generate_unique_slug(post.title)
         db.session.commit()
         flash('Your post has been updated!', 'success')
-        return redirect(url_for('main.post', post_id=post.id))
-    elif request.method == 'GET': # Populate form with existing data
+        # Redirect to the post view using the potentially updated slug
+        return redirect(url_for('main.post', slug=post.slug))
+    elif request.method == 'GET':
         form.title.data = post.title
         form.body.data = post.body
+    # Pass post_id to template action if needed, but usually not
     return render_template('admin/create_edit_post.html', title='Edit Post', form=form, legend='Edit Post')
 
-@bp.route('/admin/post/<int:post_id>/delete', methods=['POST']) # Use POST for deletion
+@bp.route('/admin/post/<int:post_id>/delete', methods=['POST'])
 @admin_required
 def delete_post(post_id):
     post = db.get_or_404(Post, post_id)
-    # Optional: Add author check if needed
     db.session.delete(post)
     db.session.commit()
     flash('Your post has been deleted!', 'success')
-    return redirect(url_for('main.admin_dashboard')) # Redirect to admin dashboard
-    
+    return redirect(url_for('main.admin_dashboard'))
