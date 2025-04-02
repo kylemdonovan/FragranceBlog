@@ -20,7 +20,7 @@
                     </form>
                </div>
             </div>
-            <h2><a class="article-title" href="{{ url_for('main.post', post_id=post.id) }}">{{ post.title }}</a></h2>
+            <h2><a class="article-title" href="{{ url_for('main.post', slug=post.slug) }}">{{ post.title }}</a></h2>
              <p class="article-content">{{ post.body[:150] }}...</p>
           </div>
         </article>
