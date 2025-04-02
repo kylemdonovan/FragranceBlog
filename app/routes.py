@@ -151,39 +151,39 @@ def admin_dashboard():
 def create_post():
     form = PostForm()
     if form.validate_on_submit():
-        # Generate the unique slug from the title
-        new_slug = Post.generate_unique_slug(form.title.data)
-        post = Post(title=form.title.data,
-                    body=form.body.data,
-                    author=current_user,
-                    slug=new_slug) # Add slug here
+        # ... (slug generation, post creation logic) ...
         db.session.add(post)
         db.session.commit()
         flash('Your post has been created!', 'success')
         return redirect(url_for('main.admin_dashboard'))
-    return render_template('admin/create_edit_post.html', title='Create New Post', form=form, legend='New Post')
 
-@bp.route('/admin/post/<int:post_id>/edit', methods=['GET', 'POST']) # Keep ID for editing lookup
+    # --- ADD KEY TO RENDER_TEMPLATE ---
+    return render_template('admin/create_edit_post.html',
+                           title='Create New Post',
+                           form=form,
+                           legend='New Post',
+                           tinymce_api_key=current_app.config['TINYMCE_API_KEY']) # Pass the key
+
+@bp.route('/admin/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_post(post_id):
     post = db.get_or_404(Post, post_id)
     form = PostForm()
     if form.validate_on_submit():
-        original_title = post.title
-        post.title = form.title.data
-        post.body = form.body.data
-        # Regenerate slug ONLY if the title has changed
-        if post.title != original_title:
-            post.slug = Post.generate_unique_slug(post.title)
+        # ... (update post logic, including slug regeneration if title changed) ...
         db.session.commit()
         flash('Your post has been updated!', 'success')
-        # Redirect to the post view using the potentially updated slug
         return redirect(url_for('main.post', slug=post.slug))
     elif request.method == 'GET':
         form.title.data = post.title
         form.body.data = post.body
-    # Pass post_id to template action if needed, but usually not
-    return render_template('admin/create_edit_post.html', title='Edit Post', form=form, legend='Edit Post')
+
+    # --- ADD KEY TO RENDER_TEMPLATE ---
+    return render_template('admin/create_edit_post.html',
+                           title='Edit Post',
+                           form=form,
+                           legend='Edit Post',
+                           tinymce_api_key=current_app.config['TINYMCE_API_KEY']) # Pass the key
 
 @bp.route('/admin/post/<int:post_id>/delete', methods=['POST'])
 @admin_required

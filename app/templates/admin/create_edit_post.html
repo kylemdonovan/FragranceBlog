@@ -1,7 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
+    {# ADD TinyMCE script reference using the API key passed from the route #}
+    {# Place near the end of body or in head #}
+    {% if tinymce_api_key %} {# Only include script if key is provided #}
+    <script src="https://cdn.tiny.cloud/1/{{ tinymce_api_key }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    {% else %}
+    <!-- TinyMCE API Key not configured -->
+    {% endif %}
+
     <div class="content-section">
+        {# Ensure form includes enctype if we add image uploads later, but not needed just for RTE #}
         <form method="POST" action="">
             {{ form.hidden_tag() }} {# CSRF token #}
             <fieldset class="form-group">
@@ -17,17 +26,25 @@
                         </div>
                     {% endif %}
                 </div>
-                <div class="form-floating mb-3">
-                    {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""), placeholder="Content", style="height: 200px") }} {# Make textarea larger #}
-                    {{ form.body.label(class="form-label") }}
-                     {% if form.body.errors %}
-                        <div class="invalid-feedback">
+
+                {# --- RESTRUCTURED BODY FIELD AREA --- #}
+                {# Remove form-floating class, add label explicitly before textarea #}
+                <div class="mb-3"> {# Use standard margin bottom #}
+                    {{ form.body.label(class="form-label") }} {# Add the label here #}
+                    {# Ensure the textarea has id="body" (WTForms usually generates this) #}
+                    {# Use form.body() directly - WTForms adds the necessary attributes including id="body" #}
+                    {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""), style="height: 300px") }} {# Adjusted height #}
+                    {% if form.body.errors %}
+                        {# Display errors below textarea if needed #}
+                        <div class="invalid-feedback d-block"> {# Ensure errors are displayed #}
                             {% for error in form.body.errors %}
-                                <span>{{ error }}</span>
+                                <span>{{ error }}</span><br>
                             {% endfor %}
                         </div>
                     {% endif %}
                 </div>
+                {# ----------------------------------- #}
+
             </fieldset>
             <div class="form-group mb-3">
                 {{ form.submit(class="btn btn-outline-info") }}
@@ -35,4 +52,20 @@
             </div>
         </form>
     </div>
+
+    {# ADD TinyMCE initialization script - Place after the form/textarea #}
+    {# Only initialize if key was provided and script was loaded #}
+    {% if tinymce_api_key %}
+    <script>
+      tinymce.init({
+        selector: 'textarea#body', // Targets the textarea with id="body"
+        plugins: 'code lists link image media table wordcount preview fullscreen help', // Add plugins you want
+        toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code preview fullscreen help', // Customize the toolbar
+        height: 500, // Adjust height as needed
+        menubar: 'edit view insert format tools table help' // Optional menubar
+        // Add other configuration options here if needed
+      });
+    </script>
+    {% endif %}
+
 {% endblock %}

@@ -16,5 +16,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'instance', 'app.db') # Store DB in instance folder
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Disable modification tracking (saves resources)
-
+    
+    
     # Add other configurations here if needed later (e.g., Mail server)
+    TINYMCE_API_KEY = os.environ.get('TINYMCE_API_KEY')

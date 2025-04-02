@@ -24,7 +24,7 @@
             <h2 class="article-title">{{ post.title }}</h2>
             {# We will add the image here later #}
             {# NOTE: We will add |safe filter here after implementing RTE #}
-            <p class="article-content">{{ post.body }}</p>
+            <p class="article-content">{{ post.body | safe }}</p>
         </div>
     </article>
 
