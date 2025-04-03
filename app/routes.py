@@ -1,5 +1,5 @@
 # app/routes.py
-from flask import render_template, flash, redirect, url_for, request, Blueprint
+from flask import render_template, flash, redirect, url_for, request, Blueprint, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 import sqlalchemy as sa # Import sqlalchemy
 from app import db       # Import db from the app package
@@ -151,11 +151,27 @@ def admin_dashboard():
 def create_post():
     form = PostForm()
     if form.validate_on_submit():
-        # ... (slug generation, post creation logic) ...
+        print("--- CREATE POST: Form Validated ---") # Debug
+        print(f"--- CREATE POST: Received Title: {form.title.data}") # Debug
+        print(f"--- CREATE POST: Received Body (from form): {form.body.data[:200]}...") # Debug Body
+
+        new_slug = Post.generate_unique_slug(form.title.data)
+        post = Post(title=form.title.data,
+                    body=form.body.data, # Using the data from the form field
+                    author=current_user,
+                    slug=new_slug)
         db.session.add(post)
-        db.session.commit()
-        flash('Your post has been created!', 'success')
+        try:
+            db.session.commit()
+            print("--- CREATE POST: DB Commit Successful ---") # Debug
+            flash('Your post has been created!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            print(f"--- CREATE POST: DB Commit FAILED: {e}") # Debug
+            flash(f'Database error on create: {e}', 'danger')
         return redirect(url_for('main.admin_dashboard'))
+    elif request.method == 'POST':
+        print(f"--- CREATE POST: Form Validation FAILED. Errors: {form.errors}") # Debug validation failure
 
     # --- ADD KEY TO RENDER_TEMPLATE ---
     return render_template('admin/create_edit_post.html',
@@ -170,14 +186,35 @@ def edit_post(post_id):
     post = db.get_or_404(Post, post_id)
     form = PostForm()
     if form.validate_on_submit():
-        # ... (update post logic, including slug regeneration if title changed) ...
-        db.session.commit()
-        flash('Your post has been updated!', 'success')
+        print("--- EDIT POST: Form Validated ---") # Debug
+        print(f"--- EDIT POST: Received Title: {form.title.data}") # Debug
+        print(f"--- EDIT POST: Received Body (from form): {form.body.data[:200]}...") # Debug Body
+
+        original_title = post.title
+        post.title = form.title.data
+        post.body = form.body.data # Update body from form
+        if post.title != original_title:
+            post.slug = Post.generate_unique_slug(post.title)
+            print(f"--- EDIT POST: Slug regenerated: {post.slug}") # Debug
+
+        try:
+            db.session.commit()
+            print("--- EDIT POST: DB Commit Successful ---") # Debug
+            flash('Your post has been updated!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            print(f"--- EDIT POST: DB Commit FAILED: {e}") # Debug
+            flash(f'Database error on update: {e}', 'danger')
         return redirect(url_for('main.post', slug=post.slug))
+    elif request.method == 'POST':
+         print(f"--- EDIT POST: Form Validation FAILED. Errors: {form.errors}") # Debug validation failure
+
     elif request.method == 'GET':
         form.title.data = post.title
+        # Populate textarea with existing body on GET
         form.body.data = post.body
-
+        print("--- EDIT POST: Populating form for GET request ---") # Debug
+        
     # --- ADD KEY TO RENDER_TEMPLATE ---
     return render_template('admin/create_edit_post.html',
                            title='Edit Post',

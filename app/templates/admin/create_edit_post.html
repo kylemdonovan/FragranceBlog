@@ -11,7 +11,7 @@
 
     <div class="content-section">
         {# Ensure form includes enctype if we add image uploads later, but not needed just for RTE #}
-        <form method="POST" action="">
+        <form method="POST" action="" novalidate>
             {{ form.hidden_tag() }} {# CSRF token #}
             <fieldset class="form-group">
                 <legend class="border-bottom mb-4">{{ legend }}</legend> {# Use legend variable #}
@@ -53,17 +53,32 @@
         </form>
     </div>
 
-    {# ADD TinyMCE initialization script - Place after the form/textarea #}
-    {# Only initialize if key was provided and script was loaded #}
     {% if tinymce_api_key %}
     <script>
       tinymce.init({
-        selector: 'textarea#body', // Targets the textarea with id="body"
-        plugins: 'code lists link image media table wordcount preview fullscreen help', // Add plugins you want
-        toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code preview fullscreen help', // Customize the toolbar
-        height: 500, // Adjust height as needed
-        menubar: 'edit view insert format tools table help' // Optional menubar
-        // Add other configuration options here if needed
+        selector: 'textarea#body',
+        plugins: 'code lists link image media table wordcount preview fullscreen help',
+        toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code preview fullscreen help',
+        height: 500,
+        menubar: 'edit view insert format tools table help',
+
+        // --- ADD THIS SETUP FUNCTION ---
+        setup: function (editor) {
+          editor.on('init', function () {
+            // Find the parent form of the textarea
+            var form = editor.getElement().closest('form');
+            if (form) {
+              form.addEventListener('submit', function (e) {
+                // Trigger the save action before the form submits
+                editor.save();
+                console.log("TinyMCE content saved to textarea."); // Debug message
+              });
+            } else {
+                 console.error("Could not find parent form for TinyMCE textarea.");
+            }
+          });
+        }
+        // -----------------------------
       });
     </script>
     {% endif %}
