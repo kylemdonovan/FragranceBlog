@@ -4,6 +4,17 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import db, login # Import db and login from app package __init__
 from slugify import slugify as default_slugify
+
+#-- Association Table ---
+# This table connects posts and tags in many to many relations
+
+post_tags = db.Table('post_tags',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key = True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key = True)
+    )
+
+#-------------------------
+
 # Flask-Login user loader callback
 @login.user_loader
 def load_user(id):
@@ -29,20 +40,34 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
+#-- Tag Model ---
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    name = db.Column(db.String(50), unique = True, index = True, nullable = False)
+    
+    def __repr__(self):
+        return f'<Tag {self.name}>'
+#-----------------
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(140), nullable=False)
-    # --- ADD THIS LINE ---
+
     slug = db.Column(db.String(150), unique=True, index=True, nullable=False) # Length slightly > title
-    # -------------------
+
     body = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, index=True, default=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     # Relationships
     comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+    
+    # -- Many to many relationship to tag
+    tags = db.realtionship('Tag', secondary = post_tags, lazy = 'select', backref = db.backref('posts', lazy = 'dynamic'))
+    #---------------------------
 
-    # --- ADD THIS HELPER METHOD ---
+
     # Automatically generate slug before saving (can be called explicitly)
     @staticmethod
     def generate_unique_slug(title):
@@ -51,6 +76,9 @@ class Post(db.Model):
         counter = 1
         # Check if slug already exists in the DB
         while Post.query.filter_by(slug=slug).first():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        while db.session.scalar(sa.select(Post.id).filter_by(slug=slug)):
             slug = f"{base_slug}-{counter}"
             counter += 1
         return slug
@@ -68,4 +96,3 @@ class Comment(db.Model):
 
     def __repr__(self):
         return f'<Comment {self.id} on Post {self.post_id}>'
-        

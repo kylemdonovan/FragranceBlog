@@ -18,5 +18,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Disable modification tracking (saves resources)
     
     
-    # Add other configurations here if needed later (e.g., Mail server)
+    # --- TINYMCE CONFIG ---
     TINYMCE_API_KEY = os.environ.get('TINYMCE_API_KEY')
+    
+    # --- CLOUDINARY CONFIG ---
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')

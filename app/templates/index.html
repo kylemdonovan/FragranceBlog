@@ -10,7 +10,7 @@
               <small class="text-muted">{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }} UTC</small> {# Format timestamp #}
             </div>
             <h2><a class="article-title" href="{{ url_for('main.post', slug=post.slug) }}">{{ post.title }}</a></h2>
-            <p class="article-content">{{ post.body[:250] }}...</p> {# Show snippet #}
+                <p class="article-content">{{ post.body | striptags | truncate(250, True) }}</p>
           </div>
         </article>
     {% else %}

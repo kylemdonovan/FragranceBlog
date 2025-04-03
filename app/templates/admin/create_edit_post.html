@@ -8,13 +8,15 @@
     {% else %}
     <!-- TinyMCE API Key not configured -->
     {% endif %}
-
     <div class="content-section">
-        {# Ensure form includes enctype if we add image uploads later, but not needed just for RTE #}
-        <form method="POST" action="" novalidate>
+        {# --- ADD enctype TO FORM TAG --- #}
+        <form method="POST" action="" enctype="multipart/form-data" novalidate>
+        {# ----------------------------- #}
             {{ form.hidden_tag() }} {# CSRF token #}
-            <fieldset class="form-group">
-                <legend class="border-bottom mb-4">{{ legend }}</legend> {# Use legend variable #}
+
+<fieldset class="form-group">
+                <legend class="border-bottom mb-4">{{ legend }}</legend>
+
                 <div class="form-floating mb-3">
                     {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Title") }}
                     {{ form.title.label(class="form-label") }}
@@ -27,25 +29,42 @@
                     {% endif %}
                 </div>
 
-                {# --- RESTRUCTURED BODY FIELD AREA --- #}
-                {# Remove form-floating class, add label explicitly before textarea #}
-                <div class="mb-3"> {# Use standard margin bottom #}
-                    {{ form.body.label(class="form-label") }} {# Add the label here #}
-                    {# Ensure the textarea has id="body" (WTForms usually generates this) #}
-                    {# Use form.body() directly - WTForms adds the necessary attributes including id="body" #}
-                    {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""), style="height: 300px") }} {# Adjusted height #}
+                <div class="mb-3">
+                    {{ form.image.label(class="form-label") }}
+                    {{ form.image(class="form-control" + (" is-invalid" if form.image.errors else "")) }}
+                    {% if form.image.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.image.errors %}
+                                <span>{{ error }}</span><br>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if legend == 'Edit Post' and post and post.image_url %}
+                        <div class="mt-2">
+                            <small>Current Image:</small><br>
+                            <img src="{{ post.image_url }}" alt="Current featured image" style="max-height: 100px; max-width: 200px;">
+                        </div>
+                    {% endif %}
+                </div>
+                {# ------------------------------- #}
+
+
+                <div class="mb-3">
+                    {{ form.body.label(class="form-label") }}
+                    {# Use form.body() directly - WTForms adds id="body" #}
+                    {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""), style="height: 300px") }}
                     {% if form.body.errors %}
-                        {# Display errors below textarea if needed #}
-                        <div class="invalid-feedback d-block"> {# Ensure errors are displayed #}
+                        <div class="invalid-feedback d-block">
                             {% for error in form.body.errors %}
                                 <span>{{ error }}</span><br>
                             {% endfor %}
                         </div>
                     {% endif %}
                 </div>
-                {# ----------------------------------- #}
+                {# -------------------------------------------- #}
 
             </fieldset>
+
             <div class="form-group mb-3">
                 {{ form.submit(class="btn btn-outline-info") }}
                 <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>

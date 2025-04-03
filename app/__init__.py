@@ -6,6 +6,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Create extension instances (without app)
 db = SQLAlchemy()
@@ -37,7 +40,19 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app) # Initialize CSRF protection
-
+    
+    # --- ADD CLOUDINARY INITIALIZATION ---
+    if app.config.get('CLOUDINARY_CLOUD_NAME'): # Only configure if keys exist
+        cloudinary.config(
+            cloud_name = app.config['CLOUDINARY_CLOUD_NAME'],
+            api_key = app.config['CLOUDINARY_API_KEY'],
+            api_secret = app.config['CLOUDINARY_API_SECRET'],
+            secure=True # Use https URLs
+        )
+        print("--- Cloudinary configured. ---")
+    else:
+        print("--- Cloudinary not configured (missing keys in config). ---")
+    
     # Import and register blueprints (or routes directly for simplicity now)
     # We'll use a simple Blueprint structure for organization
     from app.routes import bp as main_bp

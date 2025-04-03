@@ -22,11 +22,19 @@
                  {% endif %}
             </div>
             <h2 class="article-title">{{ post.title }}</h2>
-            {# We will add the image here later #}
-            {# NOTE: We will add |safe filter here after implementing RTE #}
-            <p class="article-content">{{ post.body | safe }}</p>
-        </div>
-    </article>
+                {% if post.image_url %}
+                <div class="post-image mb-3 text-center"> {# Add some margin #}
+             {# Example Cloudinary Transformation: limit width to 800px, auto format/quality #}
+             {# Construct URL manually or use Cloudinary Python helpers if needed #}
+             {% set transformed_url = post.image_url.replace('/upload/', '/upload/w_800,f_auto,q_auto/') %}
+                    <img src="{{ transformed_url }}" class="img-fluid rounded" alt="{{ post.title }} featured image"> {# Bootstrap classes #}
+                </div>
+            {% endif %}
+
+                <div class="article-content">{{ post.body | safe }}</div>
+            
+            </div>
+            </article>
 
     {# Comments Section #}
     <div class="content-section mt-4">
