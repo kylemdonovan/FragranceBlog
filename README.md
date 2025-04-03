@@ -5,3 +5,6 @@ talk about provenance -
 
 can i run contests, send out a sample/decant 15ml or something to incentivize comments, lets say two weeks out from the post, random comment winner selected - provide address (sent from certain address,) 
 we would also need to set up email for our website lmao
+"infographics have significvantly increased sharing on social media. I use people on fiverr"
+
+CAN I MAKE A FRAG AI?
