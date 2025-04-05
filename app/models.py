@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import db, login # Import db and login from app package __init__
 from slugify import slugify as default_slugify
+import sqlalchemy as sa
 
 #-- Association Table ---
 # This table connects posts and tags in many to many relations
@@ -64,7 +65,7 @@ class Post(db.Model):
     comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     
     # -- Many to many relationship to tag
-    tags = db.realtionship('Tag', secondary = post_tags, lazy = 'select', backref = db.backref('posts', lazy = 'dynamic'))
+    tags = db.relationship('Tag', secondary = post_tags, lazy = 'select', backref = db.backref('posts', lazy = 'dynamic'))
     #---------------------------
 
 

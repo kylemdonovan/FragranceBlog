@@ -10,9 +10,10 @@ from urllib.parse import urlsplit
 from functools import wraps
 import os # Often needed for file paths or env vars directly
 
+
 # --- App Specific Imports ---
 from app import db
-from app.models import User, Post, Comment # Ensure Post model has slug and image_url fields
+from app.models import User, Post, Comment, Tag # Ensure Post model has slug and image_url fields
 # Remove FileSize import if not used directly in this file
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm)
 
@@ -241,7 +242,7 @@ def admin_dashboard():
 @bp.route('/admin/post/new', methods=['GET', 'POST'])
 @admin_required
 def create_post():
-    """Handles creation of a new blog post."""
+    """Handles creation of a new blog post, including tags."""
     form = PostForm()
     if form.validate_on_submit():
         print("--- CREATE POST: Form Validated ---")
@@ -264,6 +265,37 @@ def create_post():
                     author=current_user,
                     slug=new_slug,
                     image_url=image_url) # Save the URL (or None)
+ 
+
+        #--- Tag Zone
+        tag_string = form.tags.data
+        current_tags = set()
+        if tag_string:
+            tag_names = [name.strip().lower() for name in tag_string.split(',') if name.strip()]
+            # This loop iterates through the processed tag names
+            for tag_name in tag_names:
+                # --- This block MUST be indented inside the for loop ---
+                # Skip if somehow an empty tag name remained (belt-and-suspenders)
+                if not tag_name: continue
+                # Check if tag exists
+                tag = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))
+                if tag is None:
+                    # Create new tag if it doesn't exist
+                    tag = Tag(name=tag_name)
+                    db.session.add(tag) # Add the new tag object to the session
+                    print(f"--- CREATE POST: Adding new tag '{tag_name}' ---")
+                else:
+                    print(f"--- CREATE POST: Found existing tag '{tag_name}' ---")
+                # Add the found or newly created Tag object to the set for this post
+                current_tags.add(tag)
+                # --- End of indented block ---
+        # Assign the list of Tag objects to the post's relationship
+        post.tags = list(current_tags)
+        print(f"--- CREATE POST: Final tags for post: {[t.name for t in post.tags]} ---")
+
+        #--- End Tag Zone
+        
+
 
         db.session.add(post)
         try:
@@ -294,29 +326,70 @@ def create_post():
 @bp.route('/admin/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_post(post_id):
-    """Handles editing of an existing blog post."""
+    """Handles editing of an existing blog post, including tags."""
     post = db.get_or_404(Post, post_id) # Use 404 for robustness
     form = PostForm() # Create instance for both GET and POST
 
-    if form.validate_on_submit(): # Only runs on valid POST
+    if form.validate_on_submit(): # Only runs on valid POST submission
         print(f"--- EDIT POST ID {post_id}: Form Validated ---")
 
-        # Handle image upload (if a new image was provided)
+        # --- <<< START IMAGE REMOVAL/UPDATE LOGIC >>> ---
+        remove_image_checked = request.form.get('remove_image') == 'on'
         image_file = form.image.data
-        if image_file:
-            print(f"--- EDIT POST ID {post_id}: New image file '{secure_filename(image_file.filename)}' detected, attempting upload. ---")
-            new_image_url = upload_to_cloudinary(image_file)
-            if new_image_url:
-                # If upload succeeds, update the post's image_url
-                # TODO Optional: Delete old image from Cloudinary if needed (requires storing public_id)
-                print(f"--- EDIT POST ID {post_id}: Updating image URL from '{post.image_url}' to '{new_image_url}' ---")
-                post.image_url = new_image_url
-            else:
-                # If upload fails, flash warning but don't change existing URL
-                flash("New image upload failed, existing image was retained.", "warning")
-        # If no image_file was submitted, post.image_url remains unchanged
+        # Default to keeping the existing URL unless remove is checked or new image succeeds
+        new_image_url_to_save = post.image_url
 
-        # Update text fields and slug (if title changed)
+        if remove_image_checked:
+            print(f"--- EDIT POST ID {post_id}: Remove image checkbox checked. ---")
+            # TODO Optional: Delete old image from Cloudinary here if needed
+            new_image_url_to_save = None # Mark for clearing
+            flash("Existing image marked for removal.", "info")
+        elif image_file:
+            # Only attempt upload if NOT removing and a NEW file exists
+            print(f"--- EDIT POST ID {post_id}: New image file '{secure_filename(image_file.filename)}' detected, attempting upload. ---")
+            uploaded_url = upload_to_cloudinary(image_file)
+            if uploaded_url:
+                # If upload succeeds, mark the new URL for saving
+                # TODO Optional: Delete old image from Cloudinary if needed
+                print(f"--- EDIT POST ID {post_id}: Updating image URL from '{post.image_url}' to '{uploaded_url}' ---")
+                new_image_url_to_save = uploaded_url
+            else:
+                # If upload fails, flash warning but don't change existing URL variable yet
+                flash("New image upload failed, existing image was retained.", "warning")
+        # Update the post object with the final URL decided above
+        post.image_url = new_image_url_to_save
+        # --- <<< END IMAGE REMOVAL/UPDATE LOGIC >>> ---
+
+
+        # --- <<< START TAG PROCESSING FOR EDIT (Corrected Indentation) >>> ---
+        post.tags.clear() # Clear existing tags first
+        tag_string = form.tags.data
+        current_tags = set()
+        if tag_string:
+            tag_names = [name.strip().lower() for name in tag_string.split(',') if name.strip()]
+            # This loop iterates through the processed tag names
+            for tag_name in tag_names:
+                # --- This block IS NOW indented correctly inside the for loop ---
+                if not tag_name: continue # Skip empty tags
+                # Check if tag exists
+                tag = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))
+                if tag is None:
+                    # Create new tag if it doesn't exist
+                    tag = Tag(name=tag_name)
+                    db.session.add(tag) # Add the new tag object to the session
+                    print(f"--- EDIT POST ID {post_id}: Adding new tag '{tag_name}' ---")
+                else:
+                     print(f"--- EDIT POST ID {post_id}: Found existing tag '{tag_name}' ---")
+                # Add the found or newly created Tag object to the set for this post
+                current_tags.add(tag)
+                # --- End of indented block ---
+        # Assign the list of Tag objects to the post's relationship
+        post.tags = list(current_tags)
+        print(f"--- EDIT POST ID {post_id}: Final tags for post: {[t.name for t in post.tags]} ---")
+        # --- <<< END TAG PROCESSING FOR EDIT >>> ---
+
+
+        # --- Update text fields and slug (if title changed) ---
         original_title = post.title
         post.title = form.title.data
         post.body = form.body.data
@@ -324,9 +397,12 @@ def edit_post(post_id):
             old_slug = post.slug
             post.slug = Post.generate_unique_slug(post.title)
             print(f"--- EDIT POST ID {post_id}: Slug regenerated from '{old_slug}' to '{post.slug}' ---")
+        # ----------------------------------------------------
 
+
+        # --- Commit all changes to DB ---
         try:
-            db.session.commit() # Commit all changes (title, body, potentially image_url, slug)
+            db.session.commit() # Commit all changes (title, body, image_url, slug, tags)
             print(f"--- EDIT POST ID {post_id}: DB Commit Successful ---")
             flash('Your post has been updated!', 'success')
             # Redirect AFTER commit to the updated post's view page
@@ -337,21 +413,29 @@ def edit_post(post_id):
             flash(f'Database error prevented post update: {e}', 'danger')
             current_app.logger.error(f"DB Error editing post {post_id}: {e}", exc_info=True) # Log detailed error
             # If commit fails, re-render the edit form with current (failed) data
+            # The 'form' object still holds the data the user tried to submit
+            # The 'post' object might have partial changes, but rollback reverts DB state
+    # --- End of 'if form.validate_on_submit()' block ---
 
-    # Handle GET request or failed POST validation (including failed DB commit)
+
+    # --- Handle GET request or failed POST validation ---
     elif request.method == 'POST': # Only log validation errors if it was a POST
          print(f"--- EDIT POST ID {post_id}: Form Validation FAILED. Errors: {form.errors}")
 
-    # Populate form fields ONLY on initial GET request
+    # --- Populate form fields ONLY on initial GET request ---
     # If it's a POST request that failed validation or DB commit,
-    # the 'form' object already holds the submitted (invalid) data.
+    # the 'form' object already holds the submitted (invalid) data from the user.
     if request.method == 'GET':
         form.title.data = post.title
         form.body.data = post.body
+        # Pre-populate tags field by joining existing tag names
+        form.tags.data = ', '.join([tag.name for tag in post.tags])
         # NOTE: We DO NOT pre-populate the FileField (form.image.data) on GET
         print(f"--- EDIT POST ID {post_id}: Populating form for GET request ---")
 
+    # --- Render Template ---
     # Pass key AND post object for GET request or failed POST validation
+    # The 'post' object is needed to display the current image, even on failed POST
     return render_template('admin/create_edit_post.html',
                            title='Edit Post',
                            form=form,
@@ -359,6 +443,25 @@ def edit_post(post_id):
                            tinymce_api_key=current_app.config.get('TINYMCE_API_KEY'),
                            post=post) # Pass post object so template can show current image
 
+
+@bp.route('/tag/<string:tag_name>')
+def tag(tag_name):
+    """Displays posts associated with a specific tag."""
+    tag_obj = db.session.scalar(sa.select(Tag).filter_by(name = tag_name.lower()))
+    if tag_obj is None:
+        flash(f'Tag "{tag_name}" not found.', 'warning')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type = int)
+    per_page = 5
+    
+    query = tag_obj.posts.order_by(Post.timestamp.desc())
+    pagination = db.paginate(query, page = page, per_page = per_page, error_out = False)
+    posts = pagination.items
+    
+    next_url = url_for('main.tag', tag_name = tag_name, page = pagination.next_num) if pagination.has_next else None
+    prev_url = url_for('main.tag', tag_name = tag_name, page = pagination.prev_num) if pagination.has_prev else None
+    
+    return render_template('tag_posts.html', tag = tag_obj, posts = posts, title = f"Posts tagged '{tag_obj.name}'", next_url = next_url, prev_url = prev_url, pagination = pagination)
 
 @bp.route('/admin/post/<int:post_id>/delete', methods=['POST']) # Use POST for deletion safety
 @admin_required

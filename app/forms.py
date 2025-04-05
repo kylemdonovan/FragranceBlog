@@ -4,6 +4,7 @@ from flask_wtf.file import FileField, FileAllowed, FileSize
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 from app.models import User
+import sqlalchemy as sa
 
 
 class LoginForm(FlaskForm):
@@ -34,11 +35,15 @@ class RegistrationForm(FlaskForm): # Needed to create the first admin user
 
 class PostForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired(), Length(max=140)])
-    body = TextAreaField('Content', validators=[DataRequired()])
+    body = TextAreaField('Content',
+            validators = [DataRequired()],
+            render_kw = {'required': False})
     image = FileField('Featured Image (Optional)', validators=[
         FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!'),
         FileSize(max_size=5 * 1024 * 1024) # Example: Max 5MB size limit
     ])
+    
+    tags = StringField('Tags (comma-separated, optional)', validators = [Length(max=200)])
     
     submit = SubmitField('Publish Post')
 

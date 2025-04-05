@@ -63,6 +63,23 @@
                 </div>
                 {# -------------------------------------------- #}
 
+
+                {# --- ADD TAGS FIELD --- #}
+                <div class="mb-3">
+                    {{ form.tags.label(class="form-label") }}
+                    {{ form.tags(class="form-control" + (" is-invalid" if form.tags.errors else ""), placeholder="e.g., summer, citrus, designer, review") }}
+                    {% if form.tags.errors %}
+                        <div class="inva900-bt
+                        lid-feedback d-block">
+                            {% for error in form.tags.errors %}
+                                <span>{{ error }}</span><br>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Enter tags separated by commas.</small>
+                </div>
+                {# ---------------------- #}
+
             </fieldset>
 
             <div class="form-group mb-3">

@@ -21,6 +21,7 @@
                     </div>
                  {% endif %}
             </div>
+
             <h2 class="article-title">{{ post.title }}</h2>
                 {% if post.image_url %}
                 <div class="post-image mb-3 text-center"> {# Add some margin #}
@@ -34,7 +35,22 @@
                 <div class="article-content">{{ post.body | safe }}</div>
             
             </div>
+
             </article>
+
+        {# TAG DISPLAY BLOCK HERE #}
+    <div class="post-tags mt-3 mb-3"> {# Added margin bottom #}
+        <strong>Tags:</strong>
+        {% if post.tags %}
+            {% for tag in post.tags %}
+                {# Link each tag to its dedicated page #}
+                <a href="{{ url_for('main.tag', tag_name=tag.name) }}" class="badge bg-secondary text-decoration-none me-1">{{ tag.name }}</a>
+            {% endfor %}
+        {% else %}
+            <span class="text-muted">No tags assigned.</span>
+        {% endif %}
+    </div>
+    {# END TAG DISPLAY BLOCK #}
 
     {# Comments Section #}
     <div class="content-section mt-4">

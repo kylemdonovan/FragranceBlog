@@ -11,6 +11,13 @@
             </div>
             <h2><a class="article-title" href="{{ url_for('main.post', slug=post.slug) }}">{{ post.title }}</a></h2>
                 <p class="article-content">{{ post.body | striptags | truncate(250, True) }}</p>
+
+                 <div class="post-tags mt-1">
+                    {% for tag in post.tags %}
+                         <a href="{{ url_for('main.tag', tag_name=tag.name) }}" class="badge bg-light text-dark text-decoration-none me-1">{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+              
           </div>
         </article>
     {% else %}

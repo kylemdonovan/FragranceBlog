@@ -1,0 +1,54 @@
+{# app/templates/tag_posts.html #}
+{% extends "base.html" %}
+
+{% block content %}
+    {# Use tag.name passed from the route #}
+    <h1 class="mb-3">Posts Tagged: <span class="badge bg-secondary">{{ tag.name }}</span></h1>
+
+    {# Loop through posts passed from the route #}
+    {% for post in posts %}
+        <article class="media content-section">
+          <div class="media-body">
+             {# --- Optional: Thumbnail --- #}
+             {% if post.image_url %}
+                 {% set thumb_url = post.image_url.replace('/upload/', '/upload/w_150,h_100,c_fill,g_auto,f_auto,q_auto/') %}
+                 <a href="{{ url_for('main.post', slug=post.slug) }}">
+                     <img src="{{ thumb_url }}" alt="{{ post.title }} thumbnail" class="img-thumbnail float-end ms-3 mb-2" style="width: 150px;">
+                 </a>
+             {% endif %}
+             {# --------------------------- #}
+            <div class="article-metadata">
+              <a class="mr-2" href="#">{{ post.author.username }}</a>
+              <small class="text-muted">{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }} UTC</small>
+            </div>
+            <h2><a class="article-title" href="{{ url_for('main.post', slug=post.slug) }}">{{ post.title }}</a></h2>
+            <p class="article-content">{{ post.body | striptags | truncate(250, True) }}</p> {# Snippet #}
+             {# Optional: Display tags even on tag page #}
+             <div class="post-tags mt-1">
+                {% for t in post.tags %}
+                     <a href="{{ url_for('main.tag', tag_name=t.name) }}" class="badge {% if t.name == tag.name %}bg-secondary{% else %}bg-light text-dark{% endif %} text-decoration-none me-1">{{ t.name }}</a>
+                {% endfor %}
+            </div>
+          </div>
+        </article>
+    {% else %}
+        <p>No posts found with the tag "{{ tag.name }}".</p>
+    {% endfor %}
+
+    {# Pagination Links specific to the tag view #}
+    <nav aria-label="Page navigation">
+      <ul class="pagination justify-content-center mt-4">
+        {% if prev_url %}
+          <li class="page-item"><a class="page-link" href="{{ prev_url }}">Previous</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+        {# Display page numbers if desired using pagination object #}
+        {% if next_url %}
+          <li class="page-item"><a class="page-link" href="{{ next_url }}">Next</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+{% endblock %}
