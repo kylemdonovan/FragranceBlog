@@ -161,6 +161,53 @@ def post(slug):
 # === End of post function ===
 
 
+# --- <<< SEARCH ROUTE >>> ---
+@bp.route('/search')
+def search():
+    """Handles post search queries."""
+    query_param = request.args.get('q', '', type=str) # Get search term from URL arg 'q'
+
+    if not query_param:
+        # If no search term, maybe redirect to index or show a message
+        # Or just show the search results page without results
+        flash("Please enter a search term.", "info")
+        # Optionally redirect: return redirect(url_for('main.index'))
+        page = 1
+        pagination = None
+        posts = []
+    else:
+        page = request.args.get('page', 1, type=int)
+        per_page = 10 # Or your preferred posts per page for search results
+
+        # --- Perform the Search Query ---
+        # Search title OR body using case-insensitive LIKE (ilike)
+        search_term = f"%{query_param}%" # Add wildcards for partial matches
+        query = sa.select(Post).where(
+            sa.or_(
+                Post.title.ilike(search_term),
+                Post.body.ilike(search_term)
+            )
+        ).order_by(Post.timestamp.desc()) # Order results by newest first
+
+        pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+        posts = pagination.items
+        # --- End Search Query ---
+
+    # Generate pagination URLs for search results
+    # Need to include the original query param 'q' in the pagination links
+    next_url = url_for('main.search', q=query_param, page=pagination.next_num) if pagination and pagination.has_next else None
+    prev_url = url_for('main.search', q=query_param, page=pagination.prev_num) if pagination and pagination.has_prev else None
+
+    return render_template('search_results.html',
+                           title=f"Search Results for '{query_param}'",
+                           query=query_param, # Pass query back to template
+                           posts=posts,
+                           next_url=next_url,
+                           prev_url=prev_url,
+                           pagination=pagination)
+# --- <<< END SEARCH ROUTE >>> ---
+
+
 # === Authentication Routes ===
 
 @bp.route('/login', methods=['GET', 'POST'])

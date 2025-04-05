@@ -85,6 +85,12 @@
                         -->
                     {% endif %}
                 </ul>
+                {# --- ADD SEARCH FORM --- #}
+                <form class="d-flex ms-auto" method="GET" action="{{ url_for('main.search') }}"> {# Use GET, point to search route #}
+                  <input class="form-control me-2" type="search" placeholder="Search Posts" aria-label="Search" name="q" value="{{ request.args.get('q', '') }}"> {# 'q' is common query param name #}
+                  <button class="btn btn-outline-light" type="submit">Search</button> {# Changed to outline-light for dark navbar #}
+                </form>
+                {# --- END SEARCH FORM --- #}
             </div>
         </div>
     </nav>
