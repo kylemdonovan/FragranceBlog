@@ -12,6 +12,9 @@
     {# ---------------------------------------------- #}
     <title>{{ title }} - Fragrance Blog</title>
 
+    {# --- RSS Feed Link --- #}
+    <link rel="alternate" type="application/rss+xml" title="Fragrance Blog RSS Feed" href="{{ url_for('main.rss_feed', _external=True) }}">
+    {# ------------------------- #}
    
 </head>
 <body>

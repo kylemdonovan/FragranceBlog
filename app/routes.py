@@ -1,6 +1,9 @@
 # app/routes.py
 # FINAL CORRECTED Comprehensive version with Slugs, RTE Key, and Cloudinary Image Uploads
 
+from feedgen.feed import FeedGenerator
+from flask import Response, url_for
+
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
                    Blueprint, current_app)
@@ -542,5 +545,65 @@ def delete_post(post_id):
         flash('Invalid method for deleting post.', 'warning')
 
     return redirect(url_for('main.admin_dashboard'))
+
+# --- <<< ADD RSS FEED ROUTE >>> ---
+@bp.route('/feed.xml') # Or '/rss.xml', '/feed/', etc.
+def rss_feed():
+    """Generates the RSS feed for the blog."""
+    fg = FeedGenerator()
+
+    # --- Feed Header Information ---
+    # Required: id, title, author, link (href)
+    fg.id(request.url_root) # Unique ID for the feed (use site root URL)
+    fg.title('Fragrance Blog - Latest Posts') # Your Blog's Title
+    # Use url_for with _external=True to get the full URL
+    fg.link(href=url_for('main.index', _external=True), rel='alternate')
+    # Optional but recommended:
+    fg.subtitle('Reviews, musings, and guides on the world of scents.') # Your blog subtitle/description
+    fg.language('en') # Or your blog's language
+    # Add author details (replace with your info)
+    fg.author({'name': 'Your Name/Blog Name', 'email': 'your-email@example.com'})
+    # Link to the feed itself
+    fg.link(href=url_for('main.rss_feed', _external=True), rel='self')
+    # -----------------------------
+
+
+    # --- Get Latest Posts for the Feed ---
+    # Adjust limit as needed (e.g., latest 15-20 posts)
+    latest_posts = db.session.scalars(
+        sa.select(Post).order_by(Post.timestamp.desc()).limit(20)
+    ).all()
+    # -----------------------------------
+
+
+    # --- Add Posts to the Feed ---
+    for post in latest_posts:
+        fe = fg.add_entry() # Create a feed entry
+        fe.id(url_for('main.post', slug=post.slug, _external=True)) # Unique ID for the entry (use post URL)
+        fe.title(post.title)
+        fe.link(href=url_for('main.post', slug=post.slug, _external=True))
+        # Use a summary or the full content (consider length)
+        # Using striptags + truncate for a clean summary
+        summary = post.body | striptags | truncate(300, True)
+        fe.summary(summary)
+        # Or use full content (potentially large feed):
+        # fe.content(post.body, type='html') # Assumes post.body is safe HTML
+        fe.pubDate(post.timestamp) # Use the post's timestamp
+        # Add author if you want per-post author (optional)
+        # fe.author({'name': post.author.username})
+    # -----------------------------
+
+
+    # --- Generate the Feed XML ---
+    # Use rss_str() for RSS 2.0, or atom_str() for Atom
+    rss_feed_xml = fg.rss_str(pretty=True) # pretty=True makes it readable
+    # -----------------------------
+
+    # --- Return the Response ---
+    return Response(rss_feed_xml, mimetype='application/rss+xml')
+    # Or for Atom: return Response(fg.atom_str(pretty=True), mimetype='application/atom+xml')
+    # ---------------------------
+
+# --- <<< END RSS FEED ROUTE >>> ---
 
 # === End of routes.py ===
