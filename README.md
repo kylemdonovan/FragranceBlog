@@ -8,3 +8,7 @@ we would also need to set up email for our website lmao
 "infographics have significvantly increased sharing on social media. I use people on fiverr"
 
 CAN I MAKE A FRAG AI?
+
+
+submit to https://ooh.directory/about/faq/
+inspo bois de jasmin
