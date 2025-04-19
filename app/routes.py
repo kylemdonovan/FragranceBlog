@@ -3,7 +3,7 @@
 
 from feedgen.feed import FeedGenerator
 from flask import Response, url_for
-
+from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ContactForm)
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
                    Blueprint, current_app)
@@ -209,6 +209,34 @@ def search():
                            prev_url=prev_url,
                            pagination=pagination)
 # --- <<< END SEARCH ROUTE >>> ---
+
+# --- <<< ADD CONTACT ROUTE >>> ---
+@bp.route('/contact', methods=['GET', 'POST'])
+def contact():
+    """Displays contact form and handles submission (placeholder)."""
+    form = ContactForm()
+    if form.validate_on_submit():
+        # --- Placeholder Action ---
+        # In a real app, you'd get the data and send an email here
+        # using Flask-Mail or another method.
+        name = form.name.data
+        email = form.email.data
+        subject = form.subject.data
+        message = form.message.data
+
+        print("--- CONTACT FORM SUBMITTED ---")
+        print(f"Name: {name}")
+        print(f"Email: {email}")
+        print(f"Subject: {subject}")
+        print(f"Message: {message[:100]}...")
+        # For now, just flash a success message
+        flash('Your message has been received. Thank you for contacting us!', 'success')
+        # -------------------------
+        return redirect(url_for('main.contact')) # Redirect after POST
+
+    # Render the contact page on GET or failed POST validation
+    return render_template('contact.html', title='Contact Us', form=form)
+# --- <<< END CONTACT ROUTE >>> ---
 
 
 # === Authentication Routes ===

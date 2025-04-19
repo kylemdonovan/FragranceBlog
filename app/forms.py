@@ -51,3 +51,11 @@ class CommentForm(FlaskForm):
     body = TextAreaField('Your Comment', validators=[DataRequired(), Length(min=1, max=500)])
     submit = SubmitField('Submit Comment')
     
+# --- CONTACT FORM CLASS ---
+class ContactForm(FlaskForm):
+    name = StringField('Your Name', validators=[DataRequired(), Length(min=2, max=100)])
+    email = StringField('Your Email', validators=[DataRequired(), Email(), Length(max=120)])
+    subject = StringField('Subject', validators=[DataRequired(), Length(min=3, max=140)])
+    message = TextAreaField('Message', validators=[DataRequired(), Length(min=10)])
+    submit = SubmitField('Send Message')
+# ---------------------------
