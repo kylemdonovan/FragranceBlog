@@ -40,9 +40,8 @@
             </div>
         </form>
     </div>
-    <div class="border-top pt-3">
-<!--        <small class="text-muted">-->
-<!--            Already Have An Account? <a class="ml-2" href="{{ url_for('main.login') }}">Sign In</a>-->
-<!--        </small>-->
+<div class="border-top pt-3">
+        {# Link directly in the div #}
+        <a class="ms-2" href="{{ url_for('main.reset_password_request') }}">Forgot Password?</a>
     </div>
 {% endblock %}

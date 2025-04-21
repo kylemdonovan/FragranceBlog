@@ -59,3 +59,24 @@ class ContactForm(FlaskForm):
     message = TextAreaField('Message', validators=[DataRequired(), Length(min=10)])
     submit = SubmitField('Send Message')
 # ---------------------------
+
+# --- Reset Request Form ---
+class RequestPasswordResetForm(FlaskForm):
+    email = StringField('Your Email Address', validators=[DataRequired(), Email()])
+    submit = SubmitField('Request Password Reset')
+
+    # Optional: Validate that the email actually exists in the database
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user is None:
+            # Don't reveal *if* email exists, just give generic message
+            # flash("Instructions sent if email exists.", "info") # Or do this in route
+            # Raise validation error to prevent proceeding if desired
+            raise ValidationError('There is no account with that email. You must register first.')
+
+# --- ADD Reset Password Form ---
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    password2 = PasswordField(
+        'Confirm New Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match.')])
+    submit = SubmitField('Reset Password')

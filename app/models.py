@@ -5,9 +5,11 @@ from flask_login import UserMixin
 from app import db, login # Import db and login from app package __init__
 from slugify import slugify as default_slugify
 import sqlalchemy as sa
+from itsdangerous import URLSafeTimedSerializer as Serializer
+from flask import current_app
 
 #-- Association Table ---
-# This table connects posts and tags in many to many relations
+# This table connects posts and tags in many-to-many relations
 
 post_tags = db.Table('post_tags',
     db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key = True),
@@ -30,13 +32,34 @@ class User(UserMixin, db.Model):
 
     # Relationships
     posts = db.relationship('Post', backref='author', lazy='dynamic')
-    comments = db.relationship('Comment', backref='commenter', lazy='dynamic') # Changed backref
-
+    # Changed backref
+    comments = db.relationship('Comment', backref='commenter', lazy='dynamic')
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+        # --- <<< PASSWORD RESET TOKEN METHODS >>> ---
+        def get_reset_password_token(self, expires_sec=1800):
+            """Generates a secure token for password reset."""
+            s = Serializer(current_app.config['SECRET_KEY'])
+            return s.dumps({'user_id': self.id})
+
+        @staticmethod
+        def verify_reset_password_token(token, expires_sec=1800):
+            """Verifies the reset token and returns the User if valid."""
+            s = Serializer(current_app.config['SECRET_KEY'])
+            try:
+                data = s.loads(token, max_age=expires_sec)
+                user_id = data.get('user_id')
+            except Exception as e:  # Catches expired/bad signature, etc.
+                current_app.logger.warning(
+                    f"Password reset token verification failed: {e}")
+                return None
+            # Use db.session.get for primary key lookup
+            return db.session.get(User, user_id)
+        # --- <<< END PASSWORD RESET TOKEN METHODS >>> ---
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -64,7 +87,7 @@ class Post(db.Model):
     # Relationships
     comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     
-    # -- Many to many relationship to tag
+    # -- Many-to-many relationship to tag
     tags = db.relationship('Tag', secondary = post_tags, lazy = 'select', backref = db.backref('posts', lazy = 'dynamic'))
     #---------------------------
 

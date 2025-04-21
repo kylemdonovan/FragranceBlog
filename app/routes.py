@@ -18,7 +18,7 @@ import os # Often needed for file paths or env vars directly
 from app import db
 from app.models import User, Post, Comment, Tag # Ensure Post model has slug and image_url fields
 # Remove FileSize import if not used directly in this file
-from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm)
+from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, RequestPasswordResetForm, ResetPasswordForm)
 
 # --- Image Handling Imports ---
 from werkzeug.utils import secure_filename
@@ -271,6 +271,84 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.index'))
 
+
+# --- <<< PASSWORD RESET ROUTES >>> ---
+
+# Placeholder function for sending email (replace later with Flask-Mail)
+def send_password_reset_email(user):
+    token = user.get_reset_password_token()
+    # When deploying, render email templates and use Flask-Mail:
+    # msg = Message('Password Reset Request',
+    #               sender=current_app.config['MAIL_USERNAME'], # Or actual sender email
+    #               recipients=[user.email])
+    # msg.body = f'''To reset your password, visit the following link:
+    # {url_for('main.reset_password', token=token, _external=True)}
+
+    # If you did not request a password reset then simply ignore this email.
+    # This token will expire in 30 minutes.
+    # '''
+    # mail.send(msg) # Requires Flask-Mail setup
+
+    # --- TEMPORARY!!!: Print link to console ---
+    reset_url = url_for('main.reset_password', token=token, _external=True)
+    print("--- PASSWORD RESET ---")
+    print(f"Simulating email send to: {user.email}")
+    print(f"Reset Link: {reset_url}")
+    print("--- END PASSWORD RESET ---")
+    # ----------------------------------------
+
+
+@bp.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    """Handles request to reset password (sends email with token)."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index')) # Don't allow logged-in users here
+    form = RequestPasswordResetForm()
+    if form.validate_on_submit():
+        user = db.session.scalar(sa.select(User).filter_by(email=form.email.data))
+        if user:
+            # Email exists, generate token and simulate sending email
+            send_password_reset_email(user)
+            flash('Instructions to reset your password have been sent to your email (check console for link).', 'info')
+        else:
+            # Email doesn't exist, but show same message for security
+            flash('Instructions to reset your password have been sent to your email (check console for link).', 'info')
+            # Or use the validation error from the form if preferred
+        return redirect(url_for('main.login')) # Redirect to login after request
+
+    return render_template('reset_password_request.html',
+                           title='Reset Password Request', form=form)
+
+
+@bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    """Handles the actual password reset after token verification."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index')) # Shouldn't reset if logged in
+
+    user = User.verify_reset_password_token(token)
+    if not user:
+        flash('That is an invalid or expired token.', 'warning')
+        return redirect(url_for('main.reset_password_request'))
+
+    # Token is valid, show the reset form
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        # Set the new password and commit
+        user.set_password(form.password.data)
+        try:
+            db.session.commit()
+            flash('Your password has been successfully reset!', 'success')
+            return redirect(url_for('main.login')) # Redirect to login
+        except Exception as e:
+             db.session.rollback()
+             flash(f'Error resetting password: {e}', 'danger')
+             current_app.logger.error(f"DB Error resetting password for user {user.id}: {e}", exc_info=True)
+
+    # Render reset form on GET or failed POST validation
+    return render_template('reset_password.html', title='Reset Your Password', form=form)
+
+# --- <<< END PASSWORD RESET ROUTES >>> ---
 
 # === User Management Routes (Admin Only) ===
 
