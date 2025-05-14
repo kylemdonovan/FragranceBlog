@@ -9,6 +9,7 @@ we would also need to set up email for our website lmao
 
 CAN I MAKE A FRAG AI?
 
+why cant i make a an aesthetic based aroma recommendation tool - check discord or notes for your info on this - notes
 
 submit to https://ooh.directory/about/faq/
 inspo bois de jasmin
