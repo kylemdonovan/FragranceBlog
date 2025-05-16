@@ -9,12 +9,18 @@ from flask_wtf.csrf import CSRFProtect
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Create extension instances (without app)
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
 csrf = CSRFProtect()
+limiter = Limiter( # Add this
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"] # General default limits
+)
 
 # LoginManager configuration
 login.login_view = 'main.login' # The route function name for the login page
@@ -40,6 +46,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app) # Initialize CSRF protection
+    limiter.init_app(app)
     
     # --- ADD CLOUDINARY INITIALIZATION ---
     if app.config.get('CLOUDINARY_CLOUD_NAME'): # Only configure if keys exist

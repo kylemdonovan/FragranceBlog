@@ -1,6 +1,7 @@
 # app/routes.py
 # FINAL CORRECTED Comprehensive version with Slugs, RTE Key, and Cloudinary Image Uploads
 
+from app import limiter
 from feedgen.feed import FeedGenerator
 from flask import Response, url_for
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ContactForm)
@@ -242,6 +243,7 @@ def contact():
 # === Authentication Routes ===
 
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute;100 per day")
 def login():
     """Handles user login."""
     if current_user.is_authenticated:
@@ -299,6 +301,7 @@ def send_password_reset_email(user):
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
+@limiter.limit("3 per hour;10 per day") # Stricter for password reset requests
 def reset_password_request():
     """Handles request to reset password (sends email with token)."""
     if current_user.is_authenticated:
