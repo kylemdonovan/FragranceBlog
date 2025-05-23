@@ -56,17 +56,17 @@ def upload_to_cloudinary(file_to_upload):
     if not file_to_upload:
         return None
     if not current_app.config.get('CLOUDINARY_CLOUD_NAME'):
-         print("--- Upload Helper: Cloudinary not configured in Flask app. ---")
+         current_app.logger("--- Upload Helper: Cloudinary not configured in Flask app. ---")
          flash("Image upload service is not configured.", "warning")
          return None # Can't upload if keys aren't set
 
     filename = secure_filename(file_to_upload.filename)
     if not filename:
-        print("--- Upload Helper: Invalid filename after sanitizing. ---")
+        current_app.logger("--- Upload Helper: Invalid filename after sanitizing. ---")
         flash("Invalid image filename.", "warning")
         return None
 
-    print(f"--- Upload Helper: Attempting to upload '{filename}' ---")
+    current_app.logger(f"--- Upload Helper: Attempting to upload '{filename}' ---")
 
     # --- ONE Try/Except block for the upload ---
     try:
@@ -77,14 +77,14 @@ def upload_to_cloudinary(file_to_upload):
         upload_result = cloudinary.uploader.upload(file_to_upload, **options)
         secure_url = upload_result.get('secure_url')
         if secure_url:
-            print(f"--- Upload Helper: Success! URL: {secure_url} ---")
+            current_app.logger(f"--- Upload Helper: Success! URL: {secure_url} ---")
             return secure_url
         else:
-            print(f"--- Upload Helper: Failed - No secure_url. Result: {upload_result} ---")
+            current_app.logger(f"--- Upload Helper: Failed - No secure_url. Result: {upload_result} ---")
             flash("Image upload failed to return a valid URL.", "danger")
             return None
     except Exception as e:
-        print(f"--- Upload Helper: FAILED with exception: {e} ---")
+        current_app.logger(f"--- Upload Helper: FAILED with exception: {e} ---")
         flash(f"Image upload encountered an error. Please try again later.", "danger")
         # Use Flask's logger for better error tracking in production
         current_app.logger.error(f"Cloudinary upload failed: {e}", exc_info=True)
@@ -142,7 +142,7 @@ def post(slug):
             db.session.rollback()
             # Use the correct flash message for comment saving errors
             flash(f'Error saving comment: {e}', 'danger')
-            print(f"Error saving comment for post {post_obj.id}: {e}")
+            current_app.logger(f"Error saving comment for post {post_obj.id}: {e}")
             current_app.logger.error(f"DB Error saving comment: {e}", exc_info=True) # Log detailed error
         # Redirect after POST to clear form and prevent resubmission
         return redirect(url_for('main.post', slug=post_obj.slug))
@@ -225,11 +225,11 @@ def contact():
         subject = form.subject.data
         message = form.message.data
 
-        print("--- CONTACT FORM SUBMITTED ---")
-        print(f"Name: {name}")
-        print(f"Email: {email}")
-        print(f"Subject: {subject}")
-        print(f"Message: {message[:100]}...")
+        current_app.logger("--- CONTACT FORM SUBMITTED ---")
+        current_app.logger(f"Name: {name}")
+        current_app.logger(f"Email: {email}")
+        current_app.logger(f"Subject: {subject}")
+        current_app.logger(f"Message: {message[:100]}...")
         # For now, just flash a success message
         flash('Your message has been received. Thank you for contacting us!', 'success')
         # -------------------------
@@ -293,10 +293,10 @@ def send_password_reset_email(user):
 
     # --- TEMPORARY!!!: Print link to console ---
     reset_url = url_for('main.reset_password', token=token, _external=True)
-    print("--- PASSWORD RESET ---")
-    print(f"Simulating email send to: {user.email}")
-    print(f"Reset Link: {reset_url}")
-    print("--- END PASSWORD RESET ---")
+    current_app.logger("--- PASSWORD RESET ---")
+    current_app.logger(f"Simulating email send to: {user.email}")
+    current_app.logger(f"Reset Link: {reset_url}")
+    current_app.logger("--- END PASSWORD RESET ---")
     # ----------------------------------------
 
 
@@ -371,7 +371,7 @@ def register():
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating user {user.username}: {e}', 'danger')
-            print(f"Error creating user {user.username}: {e}")
+            current_app.logger(f"Error creating user {user.username}: {e}")
             current_app.logger.error(f"DB Error creating user: {e}", exc_info=True) # Log detailed error
         return redirect(url_for('main.admin_dashboard')) # Redirect back to dashboard
 
@@ -404,13 +404,13 @@ def create_post():
     """Handles creation of a new blog post, including tags."""
     form = PostForm()
     if form.validate_on_submit():
-        print("--- CREATE POST: Form Validated ---")
+        current_app.logger("--- CREATE POST: Form Validated ---")
 
         # Handle image upload first
         image_file = form.image.data
         image_url = None # Default to None
         if image_file:
-            print("--- CREATE POST: Image file detected, attempting upload. ---")
+            current_app.logger("--- CREATE POST: Image file detected, attempting upload. ---")
             image_url = upload_to_cloudinary(image_file)
             if image_url is None:
                  flash("Image upload failed, post will be created without image.", "warning")
@@ -442,15 +442,15 @@ def create_post():
                     # Create new tag if it doesn't exist
                     tag = Tag(name=tag_name)
                     db.session.add(tag) # Add the new tag object to the session
-                    print(f"--- CREATE POST: Adding new tag '{tag_name}' ---")
+                    current_app.logger(f"--- CREATE POST: Adding new tag '{tag_name}' ---")
                 else:
-                    print(f"--- CREATE POST: Found existing tag '{tag_name}' ---")
+                    current_app.logger(f"--- CREATE POST: Found existing tag '{tag_name}' ---")
                 # Add the found or newly created Tag object to the set for this post
                 current_tags.add(tag)
                 # --- End of indented block ---
         # Assign the list of Tag objects to the post's relationship
         post.tags = list(current_tags)
-        print(f"--- CREATE POST: Final tags for post: {[t.name for t in post.tags]} ---")
+        current_app.logger(f"--- CREATE POST: Final tags for post: {[t.name for t in post.tags]} ---")
 
         #--- End Tag Zone
         
@@ -459,20 +459,20 @@ def create_post():
         db.session.add(post)
         try:
             db.session.commit()
-            print(f"--- CREATE POST: DB Commit Successful for post '{post.title}' ---")
+            current_app.logger(f"--- CREATE POST: DB Commit Successful for post '{post.title}' ---")
             flash('Your post has been created!', 'success')
             # Redirect to admin dashboard after successful creation
             return redirect(url_for('main.admin_dashboard'))
         except Exception as e:
             db.session.rollback()
-            print(f"--- CREATE POST: DB Commit FAILED: {e}")
+            current_app.logger(f"--- CREATE POST: DB Commit FAILED: {e}")
             flash(f'Database error prevented post creation: {e}', 'danger')
             current_app.logger.error(f"DB Error creating post: {e}", exc_info=True) # Log detailed error
             # If commit fails, re-render the form (don't redirect)
 
     # Handle GET request or validation failure (including failed DB commit)
     elif request.method == 'POST': # Only log validation errors if it was a POST
-        print(f"--- CREATE POST: Form Validation FAILED. Errors: {form.errors}")
+        current_app.logger(f"--- CREATE POST: Form Validation FAILED. Errors: {form.errors}")
 
     # Pass key for GET request or failed POST validation
     return render_template('admin/create_edit_post.html',
@@ -490,7 +490,7 @@ def edit_post(post_id):
     form = PostForm() # Create instance for both GET and POST
 
     if form.validate_on_submit(): # Only runs on valid POST submission
-        print(f"--- EDIT POST ID {post_id}: Form Validated ---")
+        current_app.logger(f"--- EDIT POST ID {post_id}: Form Validated ---")
 
         # --- <<< START IMAGE REMOVAL/UPDATE LOGIC >>> ---
         remove_image_checked = request.form.get('remove_image') == 'on'
@@ -499,18 +499,18 @@ def edit_post(post_id):
         new_image_url_to_save = post.image_url
 
         if remove_image_checked:
-            print(f"--- EDIT POST ID {post_id}: Remove image checkbox checked. ---")
+            current_app.logger(f"--- EDIT POST ID {post_id}: Remove image checkbox checked. ---")
             # TODO Optional: Delete old image from Cloudinary here if needed
             new_image_url_to_save = None # Mark for clearing
             flash("Existing image marked for removal.", "info")
         elif image_file:
             # Only attempt upload if NOT removing and a NEW file exists
-            print(f"--- EDIT POST ID {post_id}: New image file '{secure_filename(image_file.filename)}' detected, attempting upload. ---")
+            current_app.logger(f"--- EDIT POST ID {post_id}: New image file '{secure_filename(image_file.filename)}' detected, attempting upload. ---")
             uploaded_url = upload_to_cloudinary(image_file)
             if uploaded_url:
                 # If upload succeeds, mark the new URL for saving
                 # TODO Optional: Delete old image from Cloudinary if needed
-                print(f"--- EDIT POST ID {post_id}: Updating image URL from '{post.image_url}' to '{uploaded_url}' ---")
+                current_app.logger(f"--- EDIT POST ID {post_id}: Updating image URL from '{post.image_url}' to '{uploaded_url}' ---")
                 new_image_url_to_save = uploaded_url
             else:
                 # If upload fails, flash warning but don't change existing URL variable yet
@@ -536,15 +536,15 @@ def edit_post(post_id):
                     # Create new tag if it doesn't exist
                     tag = Tag(name=tag_name)
                     db.session.add(tag) # Add the new tag object to the session
-                    print(f"--- EDIT POST ID {post_id}: Adding new tag '{tag_name}' ---")
+                    current_app.logger(f"--- EDIT POST ID {post_id}: Adding new tag '{tag_name}' ---")
                 else:
-                     print(f"--- EDIT POST ID {post_id}: Found existing tag '{tag_name}' ---")
+                     current_app.logger(f"--- EDIT POST ID {post_id}: Found existing tag '{tag_name}' ---")
                 # Add the found or newly created Tag object to the set for this post
                 current_tags.add(tag)
                 # --- End of indented block ---
         # Assign the list of Tag objects to the post's relationship
         post.tags = list(current_tags)
-        print(f"--- EDIT POST ID {post_id}: Final tags for post: {[t.name for t in post.tags]} ---")
+        current_app.logger(f"--- EDIT POST ID {post_id}: Final tags for post: {[t.name for t in post.tags]} ---")
         # --- <<< END TAG PROCESSING FOR EDIT >>> ---
 
 
@@ -555,20 +555,20 @@ def edit_post(post_id):
         if post.title != original_title:
             old_slug = post.slug
             post.slug = Post.generate_unique_slug(post.title)
-            print(f"--- EDIT POST ID {post_id}: Slug regenerated from '{old_slug}' to '{post.slug}' ---")
+            current_app.logger(f"--- EDIT POST ID {post_id}: Slug regenerated from '{old_slug}' to '{post.slug}' ---")
         # ----------------------------------------------------
 
 
         # --- Commit all changes to DB ---
         try:
             db.session.commit() # Commit all changes (title, body, image_url, slug, tags)
-            print(f"--- EDIT POST ID {post_id}: DB Commit Successful ---")
+            current_app.logger(f"--- EDIT POST ID {post_id}: DB Commit Successful ---")
             flash('Your post has been updated!', 'success')
             # Redirect AFTER commit to the updated post's view page
             return redirect(url_for('main.post', slug=post.slug))
         except Exception as e:
             db.session.rollback()
-            print(f"--- EDIT POST: DB Commit FAILED for post ID {post_id}: {e}")
+            current_app.logger(f"--- EDIT POST: DB Commit FAILED for post ID {post_id}: {e}")
             flash(f'Database error prevented post update: {e}', 'danger')
             current_app.logger.error(f"DB Error editing post {post_id}: {e}", exc_info=True) # Log detailed error
             # If commit fails, re-render the edit form with current (failed) data
@@ -579,7 +579,7 @@ def edit_post(post_id):
 
     # --- Handle GET request or failed POST validation ---
     elif request.method == 'POST': # Only log validation errors if it was a POST
-         print(f"--- EDIT POST ID {post_id}: Form Validation FAILED. Errors: {form.errors}")
+         current_app.logger(f"--- EDIT POST ID {post_id}: Form Validation FAILED. Errors: {form.errors}")
 
     # --- Populate form fields ONLY on initial GET request ---
     # If it's a POST request that failed validation or DB commit,
@@ -590,7 +590,7 @@ def edit_post(post_id):
         # Pre-populate tags field by joining existing tag names
         form.tags.data = ', '.join([tag.name for tag in post.tags])
         # NOTE: We DO NOT pre-populate the FileField (form.image.data) on GET
-        print(f"--- EDIT POST ID {post_id}: Populating form for GET request ---")
+        current_app.logger(f"--- EDIT POST ID {post_id}: Populating form for GET request ---")
 
     # --- Render Template ---
     # Pass key AND post object for GET request or failed POST validation
@@ -636,9 +636,9 @@ def delete_post(post_id):
             #     try:
             #         # Need public_id logic here if deleting Cloudinary assets
             #         # cloudinary.uploader.destroy(public_id)
-            #         print(f"--- DELETE POST: Successfully deleted image from Cloudinary for post {post_id}")
+            #         current_app.logger(f"--- DELETE POST: Successfully deleted image from Cloudinary for post {post_id}")
             #     except Exception as img_del_e:
-            #         print(f"--- DELETE POST: Failed to delete Cloudinary image for post {post_id}: {img_del_e}")
+            #         current_app.logger(f"--- DELETE POST: Failed to delete Cloudinary image for post {post_id}: {img_del_e}")
             #         flash("Post deleted, but failed to remove associated image from storage.", "warning")
 
             db.session.delete(post)
@@ -647,7 +647,7 @@ def delete_post(post_id):
         except Exception as e:
             db.session.rollback()
             flash(f'Error deleting post: {e}', 'danger')
-            print(f"Error deleting post {post_id}: {e}")
+            current_app.logger(f"Error deleting post {post_id}: {e}")
             current_app.logger.error(f"DB Error deleting post {post_id}: {e}", exc_info=True) # Log detailed error
     else:
         # Should not happen due to methods=['POST'] but good practice
