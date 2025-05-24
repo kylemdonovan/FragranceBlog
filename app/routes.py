@@ -291,7 +291,7 @@ def send_password_reset_email(user):
     # '''
     # mail.send(msg) # Requires Flask-Mail setup
 
-    # --- TEMPORARY!!!: Print link to console ---
+    # --- TEMPORARY!!!: Log link ---
     reset_url = url_for('main.reset_password', token=token, _external=True)
     current_app.logger("--- PASSWORD RESET ---")
     current_app.logger(f"Simulating email send to: {user.email}")
