@@ -1,10 +1,16 @@
 # app/routes.py
 # FINAL CORRECTED Comprehensive version with Slugs, RTE Key, and Cloudinary Image Uploads
 
-from app import limiter
+# NEW IMPORT for Flask-Mail
+from flask_mail import Message
+# NEW IMPORT for mail instance and limiter from app package
+from app import mail, limiter  # Assuming limiter is initialized in app.__init__
+
 from feedgen.feed import FeedGenerator
-from flask import Response, url_for
-from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ContactForm)
+from flask import Response, url_for, send_from_directory  # Added send_from_directory for robots.txt
+from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ContactForm, RequestPasswordResetForm,
+                       ResetPasswordForm)  # Ensured ResetPasswordForm is here
+
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
                    Blueprint, current_app)
@@ -12,20 +18,19 @@ from flask_login import login_user, logout_user, current_user, login_required
 import sqlalchemy as sa
 from urllib.parse import urlsplit
 from functools import wraps
-import os # Often needed for file paths or env vars directly
-
+import os
+import re  # NEW IMPORT for basic striptags/truncate in RSS
 
 # --- App Specific Imports ---
 from app import db
-from app.models import User, Post, Comment, Tag # Ensure Post model has slug and image_url fields
-# Remove FileSize import if not used directly in this file
-from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, RequestPasswordResetForm, ResetPasswordForm)
+from app.models import User, Post, Comment, Tag  # Ensure Post model has slug, image_url, AND image_public_id fields
 
 # --- Image Handling Imports ---
 from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
-# NOTE: cloudinary.api might be needed if deleting images later, but not for upload
+
+# cloudinary.api might be needed if using advanced API features, but uploader.destroy is sufficient for deletion
 
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
@@ -36,62 +41,75 @@ bp = Blueprint('main', __name__)
 # --- Decorator for Admin Routes ---
 def admin_required(f):
     """Ensures the user is logged in and is an admin."""
+
     @wraps(f)
-    @login_required # Apply login_required first
+    @login_required  # Apply login_required first
     def decorated_function(*args, **kwargs):
         if not current_user.is_admin:
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('main.index'))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
-# --- Helper function to upload to Cloudinary (SINGLE CORRECT VERSION) ---
+# --- Helper function to upload to Cloudinary (MODIFIED for public_id) ---
 def upload_to_cloudinary(file_to_upload):
     """
     Uploads a file to Cloudinary if configured.
-    Returns the secure URL on success, None on failure or if not configured.
+    Returns (secure_url, public_id) on success, (None, None) on failure or if not configured.
     """
-    # --- Initial Checks ---
     if not file_to_upload:
-        return None
+        return None, None
     if not current_app.config.get('CLOUDINARY_CLOUD_NAME'):
-         current_app.logger("--- Upload Helper: Cloudinary not configured in Flask app. ---")
-         flash("Image upload service is not configured.", "warning")
-         return None # Can't upload if keys aren't set
+        current_app.logger.warning("Upload Helper: Cloudinary not configured in Flask app.")
+        flash("Image upload service is not configured.", "warning")
+        return None, None
 
     filename = secure_filename(file_to_upload.filename)
     if not filename:
-        current_app.logger("--- Upload Helper: Invalid filename after sanitizing. ---")
+        current_app.logger.warning("Upload Helper: Invalid filename after sanitizing.")
         flash("Invalid image filename.", "warning")
-        return None
+        return None, None
 
-    current_app.logger(f"--- Upload Helper: Attempting to upload '{filename}' ---")
+    current_app.logger.info(f"Upload Helper: Attempting to upload '{filename}'")
 
-    # --- ONE Try/Except block for the upload ---
     try:
         options = {
-            'folder': "fragrance_blog", # Organize uploads in Cloudinary
-            'resource_type': 'auto' # Detect if image, video, etc.
+            'folder': "fragrance_blog",
+            'resource_type': 'auto'
         }
         upload_result = cloudinary.uploader.upload(file_to_upload, **options)
         secure_url = upload_result.get('secure_url')
-        if secure_url:
-            current_app.logger(f"--- Upload Helper: Success! URL: {secure_url} ---")
-            return secure_url
+        public_id = upload_result.get('public_id')
+
+        if secure_url and public_id:
+            current_app.logger.info(f"Upload Helper: Success! URL: {secure_url}, Public ID: {public_id}")
+            return secure_url, public_id
         else:
-            current_app.logger(f"--- Upload Helper: Failed - No secure_url. Result: {upload_result} ---")
-            flash("Image upload failed to return a valid URL.", "danger")
-            return None
+            current_app.logger.error(f"Upload Helper: Failed - No secure_url or public_id. Result: {upload_result}")
+            flash("Image upload failed to return a valid URL or ID.", "danger")
+            return None, None
     except Exception as e:
-        current_app.logger(f"--- Upload Helper: FAILED with exception: {e} ---")
+        current_app.logger.error(f"Upload Helper: Cloudinary upload FAILED with exception: {e}", exc_info=True)
         flash(f"Image upload encountered an error. Please try again later.", "danger")
-        # Use Flask's logger for better error tracking in production
-        current_app.logger.error(f"Cloudinary upload failed: {e}", exc_info=True)
-        return None
-    # --- End of single Try/Except block ---
+        return None, None
+
 
 # === End of upload_to_cloudinary function ===
+
+# --- Helper functions for RSS feed text processing ---
+def custom_striptags(html_string):
+    if not html_string: return ""
+    return re.sub(r'<[^>]+>', '', str(html_string))
+
+
+def custom_truncate(text, length=300, end='...'):
+    if not text: return ""
+    text_str = str(text)
+    if len(text_str) <= length:
+        return text_str
+    return text_str[:length - len(end)] + end
 
 
 # === Public Routes ===
@@ -101,7 +119,7 @@ def upload_to_cloudinary(file_to_upload):
 def index():
     """Displays the homepage with paginated posts."""
     page = request.args.get('page', 1, type=int)
-    per_page = 5 # Number of posts per page
+    per_page = current_app.config.get('POSTS_PER_PAGE', 5)  # Example: Make posts per page configurable
     query = sa.select(Post).order_by(Post.timestamp.desc())
     pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
     posts = pagination.items
@@ -113,21 +131,17 @@ def index():
                            next_url=next_url, prev_url=prev_url, pagination=pagination)
 
 
-# === CORRECTED Post Route ===
 @bp.route('/post/<string:slug>', methods=['GET', 'POST'])
 def post(slug):
     """Displays a single post by its slug and handles comment submission."""
-    # Query by slug instead of id
     post_obj = db.session.scalar(sa.select(Post).filter_by(slug=slug))
 
-    # --- Corrected block for when post is NOT found ---
     if post_obj is None:
         flash(f'Post "{slug}" not found.', 'warning')
+        current_app.logger.warning(f"Attempt to access non-existent post with slug: {slug}")
         return redirect(url_for('main.index'))
-    # --- End of corrected block ---
 
     form = CommentForm()
-    # Handle comment submission (only on valid POST requests)
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash('You must be logged in to comment.', 'warning')
@@ -140,110 +154,120 @@ def post(slug):
             flash('Your comment has been published.', 'success')
         except Exception as e:
             db.session.rollback()
-            # Use the correct flash message for comment saving errors
-            flash(f'Error saving comment: {e}', 'danger')
-            current_app.logger(f"Error saving comment for post {post_obj.id}: {e}")
-            current_app.logger.error(f"DB Error saving comment: {e}", exc_info=True) # Log detailed error
-        # Redirect after POST to clear form and prevent resubmission
+            flash(f'Error saving comment. Please try again.', 'danger')  # Simplified user message
+            current_app.logger.error(f"DB Error saving comment for post {post_obj.id} (slug: {slug}): {e}",
+                                     exc_info=True)
         return redirect(url_for('main.post', slug=post_obj.slug))
 
-    # Fetch comments for display (on GET request or failed POST validation)
     page = request.args.get('page', 1, type=int)
-    per_page_comments = 10
+    per_page_comments = current_app.config.get('COMMENTS_PER_PAGE', 10)
     comments_query = sa.select(Comment).where(Comment.post_id == post_obj.id).order_by(Comment.timestamp.desc())
     pagination_comments = db.paginate(comments_query, page=page, per_page=per_page_comments, error_out=False)
     comments = pagination_comments.items
 
-    # Generate URLs for comment pagination links
-    next_url = url_for('main.post', slug=slug, page=pagination_comments.next_num) if pagination_comments.has_next else None
-    prev_url = url_for('main.post', slug=slug, page=pagination_comments.prev_num) if pagination_comments.has_prev else None
+    next_url_comments = url_for('main.post', slug=slug,
+                                page=pagination_comments.next_num) if pagination_comments.has_next else None
+    prev_url_comments = url_for('main.post', slug=slug,
+                                page=pagination_comments.prev_num) if pagination_comments.has_prev else None
 
-    # Render the template for GET requests or if comment form validation failed
     return render_template('post.html', title=post_obj.title, post=post_obj, form=form,
-                           comments=comments, next_url=next_url, prev_url=prev_url, pagination_comments=pagination_comments)
+                           comments=comments, next_url_comments=next_url_comments, prev_url_comments=prev_url_comments,
+                           pagination_comments=pagination_comments)
 
-# === End of post function ===
 
-
-# --- <<< SEARCH ROUTE >>> ---
 @bp.route('/search')
 def search():
     """Handles post search queries."""
-    query_param = request.args.get('q', '', type=str) # Get search term from URL arg 'q'
+    query_param = request.args.get('q', '', type=str).strip()
 
     if not query_param:
-        # If no search term, maybe redirect to index or show a message
-        # Or just show the search results page without results
         flash("Please enter a search term.", "info")
-        # Optionally redirect: return redirect(url_for('main.index'))
-        page = 1
-        pagination = None
-        posts = []
-    else:
-        page = request.args.get('page', 1, type=int)
-        per_page = 10 # Or your preferred posts per page for search results
+        # Optionally redirect to index or show search page with a message
+        return render_template('search_results.html', title="Search", query=query_param, posts=[], pagination=None)
 
-        # --- Perform the Search Query ---
-        # Search title OR body using case-insensitive LIKE (ilike)
-        search_term = f"%{query_param}%" # Add wildcards for partial matches
-        query = sa.select(Post).where(
-            sa.or_(
-                Post.title.ilike(search_term),
-                Post.body.ilike(search_term)
-            )
-        ).order_by(Post.timestamp.desc()) # Order results by newest first
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config.get('SEARCH_RESULTS_PER_PAGE', 10)
+    search_term = f"%{query_param}%"
+    query = sa.select(Post).where(
+        sa.or_(
+            Post.title.ilike(search_term),
+            Post.body.ilike(search_term)  # Be mindful of searching large TEXT fields for performance
+        )
+    ).order_by(Post.timestamp.desc())
 
-        pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
-        posts = pagination.items
-        # --- End Search Query ---
+    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    posts = pagination.items
 
-    # Generate pagination URLs for search results
-    # Need to include the original query param 'q' in the pagination links
-    next_url = url_for('main.search', q=query_param, page=pagination.next_num) if pagination and pagination.has_next else None
-    prev_url = url_for('main.search', q=query_param, page=pagination.prev_num) if pagination and pagination.has_prev else None
+    next_url = url_for('main.search', q=query_param, page=pagination.next_num) if pagination.has_next else None
+    prev_url = url_for('main.search', q=query_param, page=pagination.prev_num) if pagination.has_prev else None
 
     return render_template('search_results.html',
                            title=f"Search Results for '{query_param}'",
-                           query=query_param, # Pass query back to template
+                           query=query_param,
                            posts=posts,
                            next_url=next_url,
                            prev_url=prev_url,
                            pagination=pagination)
-# --- <<< END SEARCH ROUTE >>> ---
 
-# --- <<< ADD CONTACT ROUTE >>> ---
+
 @bp.route('/contact', methods=['GET', 'POST'])
 def contact():
-    """Displays contact form and handles submission (placeholder)."""
+    """Displays contact form and handles submission by sending an email."""
     form = ContactForm()
     if form.validate_on_submit():
-        # --- Placeholder Action ---
-        # In a real app, you'd get the data and send an email here
-        # using Flask-Mail or another method.
         name = form.name.data
-        email = form.email.data
-        subject = form.subject.data
-        message = form.message.data
+        sender_email = form.email.data
+        subject_from_form = form.subject.data
+        message_body = form.message.data
 
-        current_app.logger("--- CONTACT FORM SUBMITTED ---")
-        current_app.logger(f"Name: {name}")
-        current_app.logger(f"Email: {email}")
-        current_app.logger(f"Subject: {subject}")
-        current_app.logger(f"Message: {message[:100]}...")
-        # For now, just flash a success message
-        flash('Your message has been received. Thank you for contacting us!', 'success')
-        # -------------------------
-        return redirect(url_for('main.contact')) # Redirect after POST
+        admin_email_recipient = current_app.config.get('ADMIN_EMAIL')
+        default_sender = current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
 
-    # Render the contact page on GET or failed POST validation
+        if not admin_email_recipient or not default_sender or not current_app.config.get('MAIL_SERVER'):
+            current_app.logger.error(
+                "Mail (ADMIN_EMAIL, MAIL_DEFAULT_SENDER, or MAIL_SERVER) not configured. Cannot send contact message.")
+            flash("Sorry, the contact form is currently unavailable. Please try again later.", 'danger')
+            current_app.logger.info(
+                f"DEV MODE: Contact form submission (mail not configured):\nName: {name}\nEmail: {sender_email}\nSubject: {subject_from_form}\nMessage: {message_body}")
+        else:
+            msg = Message(
+                subject=f"[{current_app.config.get('BLOG_NAME', 'Fragrance Blog')} Contact] {subject_from_form}",
+                sender=default_sender,
+                recipients=[admin_email_recipient],
+                reply_to=sender_email
+            )
+            msg.body = f"""
+You have received a new message from your blog contact form:
+
+Name: {name}
+Email: {sender_email}
+Subject: {subject_from_form}
+
+Message:
+{message_body}
+---
+Reply directly to {sender_email}.
+"""
+            try:
+                mail.send(msg)
+                current_app.logger.info(f"Contact form email sent from {sender_email} to {admin_email_recipient}")
+                flash('Your message has been sent successfully! We will get back to you soon.', 'success')
+            except Exception as e:
+                current_app.logger.error(f"Failed to send contact form email from {sender_email}: {e}", exc_info=True)
+                flash(
+                    "Sorry, we couldn't send your message at this time due to a server error. Please try again later.",
+                    'danger')
+
+        return redirect(url_for('main.contact'))
+
     return render_template('contact.html', title='Contact Us', form=form)
-# --- <<< END CONTACT ROUTE >>> ---
 
 
 # === Authentication Routes ===
 
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute;100 per day")
+@limiter.limit(lambda:
+current_app.config.get('LOGIN_RATE_LIMIT', "5 per minute;100 per day"))
 def login():
     """Handles user login."""
     if current_user.is_authenticated:
@@ -252,21 +276,20 @@ def login():
     if form.validate_on_submit():
         user = db.session.scalar(sa.select(User).where(User.username == form.username.data))
         if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password', 'danger')
+            flash('Invalid username or password.', 'danger')
             return redirect(url_for('main.login'))
 
         login_user(user, remember=form.remember_me.data)
         next_page = request.args.get('next')
-        # Security: Ensure next_page is internal
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('main.index')
         flash('Login successful!', 'success')
         return redirect(next_page)
-    # Render login page on GET or failed POST validation
     return render_template('login.html', title='Sign In', form=form)
 
+
 @bp.route('/logout')
-@login_required # Good practice to require login for logout route
+@login_required
 def logout():
     """Logs the current user out."""
     logout_user()
@@ -274,84 +297,92 @@ def logout():
     return redirect(url_for('main.index'))
 
 
-# --- <<< PASSWORD RESET ROUTES >>> ---
+# --- Password Reset Helper Function ---
+def send_password_reset_email_helper(user_obj):  # Renamed to avoid conflict if 'user' is used elsewhere
+    """Generates reset token and sends password reset email."""
+    token = user_obj.get_reset_password_token()
 
-# Placeholder function for sending email (replace later with Flask-Mail)
-def send_password_reset_email(user):
-    token = user.get_reset_password_token()
-    # When deploying, render email templates and use Flask-Mail:
-    # msg = Message('Password Reset Request',
-    #               sender=current_app.config['MAIL_USERNAME'], # Or actual sender email
-    #               recipients=[user.email])
-    # msg.body = f'''To reset your password, visit the following link:
-    # {url_for('main.reset_password', token=token, _external=True)}
+    msg = Message(
+        subject=f"[{current_app.config.get('BLOG_NAME', 'Fragrance Blog')}] Password Reset Request",
+        sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME')),
+        recipients=[user_obj.email]
+    )
+    msg.body = f"""Dear {user_obj.username},
 
-    # If you did not request a password reset then simply ignore this email.
-    # This token will expire in 30 minutes.
-    # '''
-    # mail.send(msg) # Requires Flask-Mail setup
+To reset your password, please visit the following link:
+{url_for('main.reset_password', token=token, _external=True)}
 
-    # --- TEMPORARY!!!: Log link ---
-    reset_url = url_for('main.reset_password', token=token, _external=True)
-    current_app.logger("--- PASSWORD RESET ---")
-    current_app.logger(f"Simulating email send to: {user.email}")
-    current_app.logger(f"Reset Link: {reset_url}")
-    current_app.logger("--- END PASSWORD RESET ---")
-    # ----------------------------------------
+If you did not request this reset, please ignore this email.
+This link will expire in {current_app.config.get('PASSWORD_RESET_EXPIRES_SEC', 1800) // 60} minutes.
+
+Sincerely,
+The Blog Team
+"""
+    # msg.html = render_template('email/reset_password_email.html', user=user_obj, token=token) # For HTML email
+
+    try:
+        if current_app.config.get('MAIL_SERVER'):
+            mail.send(msg)
+            current_app.logger.info(f"Password reset email successfully sent to {user_obj.email}")
+        else:
+            current_app.logger.warning(
+                f"Mail server not configured. Password reset email for {user_obj.email} NOT sent.")
+            reset_url = url_for('main.reset_password', token=token, _external=True)
+            current_app.logger.info(f"DEV MODE: Password Reset Link for {user_obj.email}: {reset_url}")
+            # Flash message for dev mode is good for user feedback
+            flash("Mail server not configured. For development, check console for reset link.", "info")
+
+    except Exception as e:
+        current_app.logger.error(f"Failed to send password reset email to {user_obj.email}: {e}", exc_info=True)
+        # Avoid flashing specific error, as it might reveal system state. Log is sufficient.
+        flash('Sorry, we encountered an issue sending the password reset email. Please try again later.', 'danger')
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
-@limiter.limit("3 per hour;10 per day") # Stricter for password reset requests
+@limiter.limit(lambda: current_app.config.get('PASSWORD_RESET_RATE_LIMIT', "3 per hour;10 per day"))
 def reset_password_request():
     """Handles request to reset password (sends email with token)."""
     if current_user.is_authenticated:
-        return redirect(url_for('main.index')) # Don't allow logged-in users here
+        return redirect(url_for('main.index'))
     form = RequestPasswordResetForm()
     if form.validate_on_submit():
-        user = db.session.scalar(sa.select(User).filter_by(email=form.email.data))
-        if user:
-            # Email exists, generate token and simulate sending email
-            send_password_reset_email(user)
-            flash('Instructions to reset your password have been sent to your email (check console for link).', 'info')
-        else:
-            # Email doesn't exist, but show same message for security
-            flash('Instructions to reset your password have been sent to your email (check console for link).', 'info')
-            # Or use the validation error from the form if preferred
-        return redirect(url_for('main.login')) # Redirect to login after request
+        user_obj = db.session.scalar(sa.select(User).filter_by(email=form.email.data))  # Renamed
+        if user_obj:
+            send_password_reset_email_helper(user_obj)  # Call the helper
+        # Always show the same message for security reasons
+        flash('If an account with that email address exists, instructions to reset your password have been sent.',
+              'info')
+        return redirect(url_for('main.login'))
 
     return render_template('reset_password_request.html',
-                           title='Reset Password Request', form=form)
+                           title='Request Password Reset', form=form)
 
 
 @bp.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     """Handles the actual password reset after token verification."""
     if current_user.is_authenticated:
-        return redirect(url_for('main.index')) # Shouldn't reset if logged in
+        return redirect(url_for('main.index'))
 
-    user = User.verify_reset_password_token(token)
-    if not user:
-        flash('That is an invalid or expired token.', 'warning')
+    user_obj = User.verify_reset_password_token(token)  # Renamed
+    if not user_obj:
+        flash('That is an invalid or expired token. Please request a new one.', 'warning')
         return redirect(url_for('main.reset_password_request'))
 
-    # Token is valid, show the reset form
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        # Set the new password and commit
-        user.set_password(form.password.data)
+        user_obj.set_password(form.password.data)
         try:
             db.session.commit()
-            flash('Your password has been successfully reset!', 'success')
-            return redirect(url_for('main.login')) # Redirect to login
+            flash('Your password has been successfully reset! You can now log in.', 'success')
+            return redirect(url_for('main.login'))
         except Exception as e:
-             db.session.rollback()
-             flash(f'Error resetting password: {e}', 'danger')
-             current_app.logger.error(f"DB Error resetting password for user {user.id}: {e}", exc_info=True)
+            db.session.rollback()
+            flash(f'An error occurred while resetting your password. Please try again.', 'danger')
+            current_app.logger.error(f"DB Error resetting password for user {user_obj.id}: {e}", exc_info=True)
 
-    # Render reset form on GET or failed POST validation
     return render_template('reset_password.html', title='Reset Your Password', form=form)
 
-# --- <<< END PASSWORD RESET ROUTES >>> ---
 
 # === User Management Routes (Admin Only) ===
 
@@ -363,19 +394,17 @@ def register():
     if form.validate_on_submit():
         user = User(username=form.username.data, email=form.email.data)
         user.set_password(form.password.data)
-        user.is_admin = False # Admins create non-admin users by default
+        user.is_admin = False  # Admins create non-admin users by default
         db.session.add(user)
         try:
             db.session.commit()
             flash(f'User {user.username} created successfully!', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'Error creating user {user.username}: {e}', 'danger')
-            current_app.logger(f"Error creating user {user.username}: {e}")
-            current_app.logger.error(f"DB Error creating user: {e}", exc_info=True) # Log detailed error
-        return redirect(url_for('main.admin_dashboard')) # Redirect back to dashboard
+            flash(f'Error creating user {user.username}. Please check the logs.', 'danger')
+            current_app.logger.error(f"DB Error creating user {user.username}: {e}", exc_info=True)
+        return redirect(url_for('main.admin_dashboard'))
 
-    # Render registration form on GET or failed POST validation
     return render_template('register.html', title='Register New User', form=form)
 
 
@@ -386,7 +415,7 @@ def register():
 def admin_dashboard():
     """Displays the admin dashboard with posts to manage."""
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = current_app.config.get('ADMIN_POSTS_PER_PAGE', 10)
     query = sa.select(Post).order_by(Post.timestamp.desc())
     pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
     posts = pagination.items
@@ -401,80 +430,60 @@ def admin_dashboard():
 @bp.route('/admin/post/new', methods=['GET', 'POST'])
 @admin_required
 def create_post():
-    """Handles creation of a new blog post, including tags."""
+    """Handles creation of a new blog post, including tags and Cloudinary image public_id."""
     form = PostForm()
     if form.validate_on_submit():
-        current_app.logger("--- CREATE POST: Form Validated ---")
+        current_app.logger.info("CREATE POST: Form Validated")
 
-        # Handle image upload first
         image_file = form.image.data
-        image_url = None # Default to None
+        image_url = None
+        image_public_id = None
+
         if image_file:
-            current_app.logger("--- CREATE POST: Image file detected, attempting upload. ---")
-            image_url = upload_to_cloudinary(image_file)
+            current_app.logger.info("CREATE POST: Image file detected, attempting upload.")
+            image_url, image_public_id = upload_to_cloudinary(image_file)
             if image_url is None:
-                 flash("Image upload failed, post will be created without image.", "warning")
+                flash("Image upload failed, post will be created without image.", "warning")
 
-        # Generate slug
         new_slug = Post.generate_unique_slug(form.title.data)
+        post_obj = Post(title=form.title.data,  # Renamed to post_obj
+                        body=form.body.data,
+                        author=current_user,
+                        slug=new_slug,
+                        image_url=image_url,
+                        image_public_id=image_public_id)
 
-        # Create Post object
-        post = Post(title=form.title.data,
-                    body=form.body.data,
-                    author=current_user,
-                    slug=new_slug,
-                    image_url=image_url) # Save the URL (or None)
- 
-
-        #--- Tag Zone
         tag_string = form.tags.data
         current_tags = set()
         if tag_string:
             tag_names = [name.strip().lower() for name in tag_string.split(',') if name.strip()]
-            # This loop iterates through the processed tag names
             for tag_name in tag_names:
-                # --- This block MUST be indented inside the for loop ---
-                # Skip if somehow an empty tag name remained (belt-and-suspenders)
                 if not tag_name: continue
-                # Check if tag exists
-                tag = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))
-                if tag is None:
-                    # Create new tag if it doesn't exist
-                    tag = Tag(name=tag_name)
-                    db.session.add(tag) # Add the new tag object to the session
-                    current_app.logger(f"--- CREATE POST: Adding new tag '{tag_name}' ---")
+                tag_obj = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))  # Renamed
+                if tag_obj is None:
+                    tag_obj = Tag(name=tag_name)
+                    db.session.add(tag_obj)
+                    current_app.logger.info(f"CREATE POST: Adding new tag '{tag_name}'")
                 else:
-                    current_app.logger(f"--- CREATE POST: Found existing tag '{tag_name}' ---")
-                # Add the found or newly created Tag object to the set for this post
-                current_tags.add(tag)
-                # --- End of indented block ---
-        # Assign the list of Tag objects to the post's relationship
-        post.tags = list(current_tags)
-        current_app.logger(f"--- CREATE POST: Final tags for post: {[t.name for t in post.tags]} ---")
+                    current_app.logger.info(f"CREATE POST: Found existing tag '{tag_name}'")
+                current_tags.add(tag_obj)
+        post_obj.tags = list(current_tags)
+        current_app.logger.info(f"CREATE POST: Final tags for post: {[t.name for t in post_obj.tags]}")
 
-        #--- End Tag Zone
-        
-
-
-        db.session.add(post)
+        db.session.add(post_obj)
         try:
             db.session.commit()
-            current_app.logger(f"--- CREATE POST: DB Commit Successful for post '{post.title}' ---")
+            current_app.logger.info(f"CREATE POST: DB Commit Successful for post '{post_obj.title}'")
             flash('Your post has been created!', 'success')
-            # Redirect to admin dashboard after successful creation
             return redirect(url_for('main.admin_dashboard'))
         except Exception as e:
             db.session.rollback()
-            current_app.logger(f"--- CREATE POST: DB Commit FAILED: {e}")
-            flash(f'Database error prevented post creation: {e}', 'danger')
-            current_app.logger.error(f"DB Error creating post: {e}", exc_info=True) # Log detailed error
-            # If commit fails, re-render the form (don't redirect)
+            current_app.logger.error(f"CREATE POST: DB Commit FAILED for post '{form.title.data}': {e}", exc_info=True)
+            flash(f'Database error prevented post creation. Please try again.', 'danger')
 
-    # Handle GET request or validation failure (including failed DB commit)
-    elif request.method == 'POST': # Only log validation errors if it was a POST
-        current_app.logger(f"--- CREATE POST: Form Validation FAILED. Errors: {form.errors}")
+    elif request.method == 'POST':
+        current_app.logger.warning(f"CREATE POST: Form Validation FAILED. Errors: {form.errors}")
 
-    # Pass key for GET request or failed POST validation
     return render_template('admin/create_edit_post.html',
                            title='Create New Post',
                            form=form,
@@ -485,234 +494,225 @@ def create_post():
 @bp.route('/admin/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_post(post_id):
-    """Handles editing of an existing blog post, including tags."""
-    post = db.get_or_404(Post, post_id) # Use 404 for robustness
-    form = PostForm() # Create instance for both GET and POST
+    """Handles editing of an existing blog post, including tags and Cloudinary image management."""
+    post_to_edit = db.get_or_404(Post, post_id)
+    form = PostForm()
 
-    if form.validate_on_submit(): # Only runs on valid POST submission
-        current_app.logger(f"--- EDIT POST ID {post_id}: Form Validated ---")
+    if form.validate_on_submit():
+        current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Form Validated")
 
-        # --- <<< START IMAGE REMOVAL/UPDATE LOGIC >>> ---
         remove_image_checked = request.form.get('remove_image') == 'on'
         image_file = form.image.data
-        # Default to keeping the existing URL unless remove is checked or new image succeeds
-        new_image_url_to_save = post.image_url
+        old_public_id = post_to_edit.image_public_id
 
         if remove_image_checked:
-            current_app.logger(f"--- EDIT POST ID {post_id}: Remove image checkbox checked. ---")
-            # TODO Optional: Delete old image from Cloudinary here if needed
-            new_image_url_to_save = None # Mark for clearing
-            flash("Existing image marked for removal.", "info")
+            current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Remove image checkbox checked.")
+            if old_public_id and current_app.config.get('CLOUDINARY_CLOUD_NAME'):
+                try:
+                    cloudinary.uploader.destroy(old_public_id)
+                    current_app.logger.info(
+                        f"EDIT POST ID {post_to_edit.id}: Successfully deleted old image (public_id: {old_public_id}) from Cloudinary.")
+                except Exception as e:
+                    current_app.logger.error(
+                        f"EDIT POST ID {post_to_edit.id}: Failed to delete old Cloudinary image (public_id: {old_public_id}): {e}",
+                        exc_info=True)
+                    flash("Failed to remove old image from storage.", "warning")
+            elif old_public_id:
+                current_app.logger.warning(
+                    f"EDIT POST ID {post_to_edit.id}: Cloudinary not configured, skipping deletion of old image (public_id: {old_public_id}).")
+            post_to_edit.image_url = None
+            post_to_edit.image_public_id = None
+            flash("Existing image has been removed from the post.", "info")  # More specific flash
         elif image_file:
-            # Only attempt upload if NOT removing and a NEW file exists
-            current_app.logger(f"--- EDIT POST ID {post_id}: New image file '{secure_filename(image_file.filename)}' detected, attempting upload. ---")
-            uploaded_url = upload_to_cloudinary(image_file)
-            if uploaded_url:
-                # If upload succeeds, mark the new URL for saving
-                # TODO Optional: Delete old image from Cloudinary if needed
-                current_app.logger(f"--- EDIT POST ID {post_id}: Updating image URL from '{post.image_url}' to '{uploaded_url}' ---")
-                new_image_url_to_save = uploaded_url
+            current_app.logger.info(
+                f"EDIT POST ID {post_to_edit.id}: New image file '{secure_filename(image_file.filename)}' detected, attempting upload.")
+            new_url, new_public_id = upload_to_cloudinary(image_file)
+            if new_url and new_public_id:
+                if old_public_id and old_public_id != new_public_id and current_app.config.get('CLOUDINARY_CLOUD_NAME'):
+                    try:
+                        cloudinary.uploader.destroy(old_public_id)
+                        current_app.logger.info(
+                            f"EDIT POST ID {post_to_edit.id}: Successfully deleted replaced image (public_id: {old_public_id}) from Cloudinary.")
+                    except Exception as e:
+                        current_app.logger.error(
+                            f"EDIT POST ID {post_to_edit.id}: Failed to delete replaced Cloudinary image (public_id: {old_public_id}): {e}",
+                            exc_info=True)
+                        flash("Failed to remove previously uploaded image from storage.", "warning")
+                elif old_public_id and old_public_id != new_public_id:
+                    current_app.logger.warning(
+                        f"EDIT POST ID {post_to_edit.id}: Cloudinary not configured, skipping deletion of replaced image (public_id: {old_public_id}).")
+                post_to_edit.image_url = new_url
+                post_to_edit.image_public_id = new_public_id
+                current_app.logger.info(
+                    f"EDIT POST ID {post_to_edit.id}: Updating image URL to '{new_url}' and public_id to '{new_public_id}'")
             else:
-                # If upload fails, flash warning but don't change existing URL variable yet
-                flash("New image upload failed, existing image was retained.", "warning")
-        # Update the post object with the final URL decided above
-        post.image_url = new_image_url_to_save
-        # --- <<< END IMAGE REMOVAL/UPDATE LOGIC >>> ---
+                flash("New image upload failed. Existing image (if any) was retained.", "warning")
 
-
-        # --- <<< START TAG PROCESSING FOR EDIT (Corrected Indentation) >>> ---
-        post.tags.clear() # Clear existing tags first
+        post_to_edit.tags.clear()
         tag_string = form.tags.data
         current_tags = set()
         if tag_string:
             tag_names = [name.strip().lower() for name in tag_string.split(',') if name.strip()]
-            # This loop iterates through the processed tag names
             for tag_name in tag_names:
-                # --- This block IS NOW indented correctly inside the for loop ---
-                if not tag_name: continue # Skip empty tags
-                # Check if tag exists
-                tag = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))
-                if tag is None:
-                    # Create new tag if it doesn't exist
-                    tag = Tag(name=tag_name)
-                    db.session.add(tag) # Add the new tag object to the session
-                    current_app.logger(f"--- EDIT POST ID {post_id}: Adding new tag '{tag_name}' ---")
+                if not tag_name: continue
+                tag_obj = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))  # Renamed
+                if tag_obj is None:
+                    tag_obj = Tag(name=tag_name)
+                    db.session.add(tag_obj)
+                    current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Adding new tag '{tag_name}'")
                 else:
-                     current_app.logger(f"--- EDIT POST ID {post_id}: Found existing tag '{tag_name}' ---")
-                # Add the found or newly created Tag object to the set for this post
-                current_tags.add(tag)
-                # --- End of indented block ---
-        # Assign the list of Tag objects to the post's relationship
-        post.tags = list(current_tags)
-        current_app.logger(f"--- EDIT POST ID {post_id}: Final tags for post: {[t.name for t in post.tags]} ---")
-        # --- <<< END TAG PROCESSING FOR EDIT >>> ---
+                    current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Found existing tag '{tag_name}'")
+                current_tags.add(tag_obj)
+        post_to_edit.tags = list(current_tags)
+        current_app.logger.info(
+            f"EDIT POST ID {post_to_edit.id}: Final tags for post: {[t.name for t in post_to_edit.tags]}")
 
+        original_title = post_to_edit.title
+        post_to_edit.title = form.title.data
+        post_to_edit.body = form.body.data
+        if post_to_edit.title != original_title:  # Regenerate slug only if title changed
+            old_slug = post_to_edit.slug
+            post_to_edit.slug = Post.generate_unique_slug(post_to_edit.title)  # Ensure Post model has this method
+            current_app.logger.info(
+                f"EDIT POST ID {post_to_edit.id}: Slug regenerated from '{old_slug}' to '{post_to_edit.slug}'")
 
-        # --- Update text fields and slug (if title changed) ---
-        original_title = post.title
-        post.title = form.title.data
-        post.body = form.body.data
-        if post.title != original_title:
-            old_slug = post.slug
-            post.slug = Post.generate_unique_slug(post.title)
-            current_app.logger(f"--- EDIT POST ID {post_id}: Slug regenerated from '{old_slug}' to '{post.slug}' ---")
-        # ----------------------------------------------------
-
-
-        # --- Commit all changes to DB ---
         try:
-            db.session.commit() # Commit all changes (title, body, image_url, slug, tags)
-            current_app.logger(f"--- EDIT POST ID {post_id}: DB Commit Successful ---")
+            db.session.commit()
+            current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: DB Commit Successful")
             flash('Your post has been updated!', 'success')
-            # Redirect AFTER commit to the updated post's view page
-            return redirect(url_for('main.post', slug=post.slug))
+            return redirect(url_for('main.post', slug=post_to_edit.slug))
         except Exception as e:
             db.session.rollback()
-            current_app.logger(f"--- EDIT POST: DB Commit FAILED for post ID {post_id}: {e}")
-            flash(f'Database error prevented post update: {e}', 'danger')
-            current_app.logger.error(f"DB Error editing post {post_id}: {e}", exc_info=True) # Log detailed error
-            # If commit fails, re-render the edit form with current (failed) data
-            # The 'form' object still holds the data the user tried to submit
-            # The 'post' object might have partial changes, but rollback reverts DB state
-    # --- End of 'if form.validate_on_submit()' block ---
+            current_app.logger.error(f"EDIT POST: DB Commit FAILED for post ID {post_to_edit.id}: {e}", exc_info=True)
+            flash(f'Database error prevented post update. Please try again.', 'danger')
 
+    elif request.method == 'POST':
+        current_app.logger.warning(f"EDIT POST ID {post_to_edit.id}: Form Validation FAILED. Errors: {form.errors}")
 
-    # --- Handle GET request or failed POST validation ---
-    elif request.method == 'POST': # Only log validation errors if it was a POST
-         current_app.logger(f"--- EDIT POST ID {post_id}: Form Validation FAILED. Errors: {form.errors}")
-
-    # --- Populate form fields ONLY on initial GET request ---
-    # If it's a POST request that failed validation or DB commit,
-    # the 'form' object already holds the submitted (invalid) data from the user.
     if request.method == 'GET':
-        form.title.data = post.title
-        form.body.data = post.body
-        # Pre-populate tags field by joining existing tag names
-        form.tags.data = ', '.join([tag.name for tag in post.tags])
-        # NOTE: We DO NOT pre-populate the FileField (form.image.data) on GET
-        current_app.logger(f"--- EDIT POST ID {post_id}: Populating form for GET request ---")
+        form.title.data = post_to_edit.title
+        form.body.data = post_to_edit.body
+        form.tags.data = ', '.join([tag.name for tag in post_to_edit.tags])
+        current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Populating form for GET request")
 
-    # --- Render Template ---
-    # Pass key AND post object for GET request or failed POST validation
-    # The 'post' object is needed to display the current image, even on failed POST
     return render_template('admin/create_edit_post.html',
                            title='Edit Post',
                            form=form,
                            legend='Edit Post',
                            tinymce_api_key=current_app.config.get('TINYMCE_API_KEY'),
-                           post=post) # Pass post object so template can show current image
+                           post=post_to_edit)
 
 
 @bp.route('/tag/<string:tag_name>')
 def tag(tag_name):
     """Displays posts associated with a specific tag."""
-    tag_obj = db.session.scalar(sa.select(Tag).filter_by(name = tag_name.lower()))
+    tag_obj = db.session.scalar(sa.select(Tag).filter_by(name=tag_name.lower()))
     if tag_obj is None:
         flash(f'Tag "{tag_name}" not found.', 'warning')
         return redirect(url_for('main.index'))
-    page = request.args.get('page', 1, type = int)
-    per_page = 5
-    
-    query = tag_obj.posts.order_by(Post.timestamp.desc())
-    pagination = db.paginate(query, page = page, per_page = per_page, error_out = False)
-    posts = pagination.items
-    
-    next_url = url_for('main.tag', tag_name = tag_name, page = pagination.next_num) if pagination.has_next else None
-    prev_url = url_for('main.tag', tag_name = tag_name, page = pagination.prev_num) if pagination.has_prev else None
-    
-    return render_template('tag_posts.html', tag = tag_obj, posts = posts, title = f"Posts tagged '{tag_obj.name}'", next_url = next_url, prev_url = prev_url, pagination = pagination)
 
-@bp.route('/admin/post/<int:post_id>/delete', methods=['POST']) # Use POST for deletion safety
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config.get('TAG_POSTS_PER_PAGE', 5)
+
+    # Using the relationship directly for pagination
+    query = tag_obj.posts.order_by(Post.timestamp.desc())  # This should be a query object
+    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    posts_on_page = pagination.items  # Renamed for clarity
+
+    next_url = url_for('main.tag', tag_name=tag_name, page=pagination.next_num) if pagination.has_next else None
+    prev_url = url_for('main.tag', tag_name=tag_name, page=pagination.prev_num) if pagination.has_prev else None
+
+    return render_template('tag_posts.html', tag=tag_obj, posts=posts_on_page,
+                           title=f"Posts tagged '{tag_obj.name}'",
+                           next_url=next_url, prev_url=prev_url, pagination=pagination)
+
+
+@bp.route('/admin/post/<int:post_id>/delete', methods=['POST'])
 @admin_required
 def delete_post(post_id):
-    """Handles deletion of a blog post."""
-    # Ensure method is POST for safety, although route decorator handles it
-    if request.method == 'POST':
-        post = db.get_or_404(Post, post_id)
-        post_title = post.title # Get title before deleting for flash message
-        try:
-            # TODO Optional: Delete associated image from Cloudinary before deleting post
-            # if post.image_url:
-            #     try:
-            #         # Need public_id logic here if deleting Cloudinary assets
-            #         # cloudinary.uploader.destroy(public_id)
-            #         current_app.logger(f"--- DELETE POST: Successfully deleted image from Cloudinary for post {post_id}")
-            #     except Exception as img_del_e:
-            #         current_app.logger(f"--- DELETE POST: Failed to delete Cloudinary image for post {post_id}: {img_del_e}")
-            #         flash("Post deleted, but failed to remove associated image from storage.", "warning")
+    """Handles deletion of a blog post and its Cloudinary image."""
+    if request.method == 'POST':  # Redundant due to methods=['POST'] but safe
+        post_to_delete = db.get_or_404(Post, post_id)
+        post_title = post_to_delete.title
+        image_public_id_to_delete = post_to_delete.image_public_id
 
-            db.session.delete(post)
+        try:
+            if image_public_id_to_delete and current_app.config.get('CLOUDINARY_CLOUD_NAME'):
+                try:
+                    cloudinary.uploader.destroy(image_public_id_to_delete)
+                    current_app.logger.info(
+                        f"DELETE POST: Successfully deleted image (public_id: {image_public_id_to_delete}) from Cloudinary for post {post_id}")
+                except Exception as img_del_e:
+                    current_app.logger.error(
+                        f"DELETE POST: Failed to delete Cloudinary image for post {post_id} (public_id: {image_public_id_to_delete}): {img_del_e}",
+                        exc_info=True)
+                    flash("Post deleted from database, but failed to remove associated image from Cloudinary.",
+                          "warning")
+            elif image_public_id_to_delete:
+                current_app.logger.warning(
+                    f"DELETE POST: Cloudinary not configured, skipping deletion of image (public_id: {image_public_id_to_delete}) for post {post_id}.")
+
+            db.session.delete(post_to_delete)
             db.session.commit()
-            flash(f'Post "{post_title}" has been deleted!', 'success')
+            flash(f'Post "{post_title}" has been deleted successfully!', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'Error deleting post: {e}', 'danger')
-            current_app.logger(f"Error deleting post {post_id}: {e}")
-            current_app.logger.error(f"DB Error deleting post {post_id}: {e}", exc_info=True) # Log detailed error
+            flash(f'Error deleting post "{post_title}". Please try again.', 'danger')
+            current_app.logger.error(f"DB Error deleting post {post_id} ('{post_title}'): {e}", exc_info=True)
     else:
-        # Should not happen due to methods=['POST'] but good practice
-        flash('Invalid method for deleting post.', 'warning')
+        flash('Invalid request method for deleting post.', 'warning')
+        current_app.logger.warning(f"Invalid method '{request.method}' for deleting post {post_id}.")
 
     return redirect(url_for('main.admin_dashboard'))
 
-# --- <<< ADD RSS FEED ROUTE >>> ---
-@bp.route('/feed.xml') # Or '/rss.xml', '/feed/', etc.
+
+@bp.route('/feed.xml')
 def rss_feed():
     """Generates the RSS feed for the blog."""
     fg = FeedGenerator()
 
-    # --- Feed Header Information ---
-    # Required: id, title, author, link (href)
-    fg.id(request.url_root) # Unique ID for the feed (use site root URL)
-    fg.title('Fragrance Blog - Latest Posts') # Your Blog's Title
-    # Use url_for with _external=True to get the full URL
+    blog_name = current_app.config.get('BLOG_NAME', 'My Fragrance Blog')
+    blog_author_name = current_app.config.get('BLOG_AUTHOR_NAME', 'Blog Admin')
+    blog_author_email = current_app.config.get('BLOG_AUTHOR_EMAIL', 'noreply@example.com')
+    posts_for_feed = current_app.config.get('RSS_FEED_POST_LIMIT', 20)
+
+    fg.id(request.url_root)
+    fg.title(f'{blog_name} - Latest Posts')
     fg.link(href=url_for('main.index', _external=True), rel='alternate')
-    # Optional but recommended:
-    fg.subtitle('Reviews, musings, and guides on the world of scents.') # Your blog subtitle/description
-    fg.language('en') # Or your blog's language
-    # Add author details (replace with your info)
-    fg.author({'name': 'Your Name/Blog Name', 'email': 'your-email@example.com'})
-    # Link to the feed itself
+    fg.subtitle(current_app.config.get('BLOG_SUBTITLE', 'Reviews, musings, and guides on the world of scents.'))
+    fg.language(current_app.config.get('BLOG_LANGUAGE', 'en'))
+    fg.author({'name': blog_author_name, 'email': blog_author_email})
     fg.link(href=url_for('main.rss_feed', _external=True), rel='self')
-    # -----------------------------
 
-
-    # --- Get Latest Posts for the Feed ---
-    # Adjust limit as needed (e.g., latest 15-20 posts)
     latest_posts = db.session.scalars(
-        sa.select(Post).order_by(Post.timestamp.desc()).limit(20)
+        sa.select(Post).order_by(Post.timestamp.desc()).limit(posts_for_feed)
     ).all()
-    # -----------------------------------
 
+    for post_item in latest_posts:
+        fe = fg.add_entry()
+        entry_url = url_for('main.post', slug=post_item.slug, _external=True)
+        fe.id(entry_url)
+        fe.title(post_item.title)
+        fe.link(href=entry_url)
 
-    # --- Add Posts to the Feed ---
-    for post in latest_posts:
-        fe = fg.add_entry() # Create a feed entry
-        fe.id(url_for('main.post', slug=post.slug, _external=True)) # Unique ID for the entry (use post URL)
-        fe.title(post.title)
-        fe.link(href=url_for('main.post', slug=post.slug, _external=True))
-        # Use a summary or the full content (consider length)
-        # Using striptags + truncate for a clean summary
-        summary = post.body | striptags | truncate(300, True)
+        # Use helper functions for stripping HTML and truncating
+        stripped_body = custom_striptags(post_item.body)
+        summary = custom_truncate(stripped_body, length=300, end='...')
         fe.summary(summary)
-        # Or use full content (potentially large feed):
-        # fe.content(post.body, type='html') # Assumes post.body is safe HTML
-        fe.pubDate(post.timestamp) # Use the post's timestamp
-        # Add author if you want per-post author (optional)
-        # fe.author({'name': post.author.username})
-    # -----------------------------
+        # fe.content(post_item.body, type='html') # Optionally include full HTML content
 
+        fe.pubDate(post_item.timestamp)  # Ensure timestamp is timezone-aware for consistency
+        if post_item.author:  # Add post author if available
+            fe.author({'name': post_item.author.username})
 
-    # --- Generate the Feed XML ---
-    # Use rss_str() for RSS 2.0, or atom_str() for Atom
-    rss_feed_xml = fg.rss_str(pretty=True) # pretty=True makes it readable
-    # -----------------------------
-
-    # --- Return the Response ---
+    rss_feed_xml = fg.rss_str(pretty=True)
     return Response(rss_feed_xml, mimetype='application/rss+xml')
-    # Or for Atom: return Response(fg.atom_str(pretty=True), mimetype='application/atom+xml')
-    # ---------------------------
 
-# --- <<< END RSS FEED ROUTE >>> ---
+
+# Route to serve robots.txt from the static folder
+@bp.route('/robots.txt')
+def serve_robots_txt():
+    return send_from_directory(current_app.static_folder, 'robots.txt')
+
 
 # === End of routes.py ===
