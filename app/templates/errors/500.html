@@ -1,0 +1,32 @@
+{% extends "base.html" %} {# Make sure this path to your base.html is correct #}
+
+{% block title %}Server Error - {{ super() if super }}{% endblock %} {# super() for Jinja2 block inheritance #}
+
+{% block content %}
+<div class="container mt-5 mb-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <h1 class="display-1 text-warning">500</h1> {# text-warning is a Bootstrap class, you can change it #}
+                    <h2 class="card-title h3 mb-3">Oops! Something Went Wrong.</h2>
+                    <p class="card-text text-muted lead">
+                        We've encountered an unexpected issue on our server, and our technical team has been automatically notified.
+                        We are working diligently to fix the problem.
+                    </p>
+                    <hr class="my-4">
+                    <p>
+                        Please try refreshing the page in a little while, or you can return to the homepage.
+                        We sincerely apologize for any inconvenience this may have caused.
+                    </p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg mt-4">
+                        <i class="fas fa-home me-2"></i>Go to Homepage {# Example with Font Awesome icon if you use it #}
+                    </a>
+                    {# Optionally, you could add a link to your contact page if you feel it's appropriate for a 500 error #}
+                    {# <p class="mt-3">If the problem persists for an extended period, please feel free to <a href="{{ url_for('main.contact') }}">contact us</a>.</p> #}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
