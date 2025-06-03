@@ -7,21 +7,34 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    {# --- Font Awesome (Optional, if you use icons like in the sidebar example) --- #}
+    {# <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" /> #}
+
     {# --- CSS OVERWRITE BOOTSTRAP --- #}
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     {# ---------------------------------------------- #}
-    <title>{{ title }} - Fragrance Blog</title>
+
+    {# --- Favicon (Placeholder - Add your actual favicon link here later) --- #}
+    {# <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}"> #}
+    {# <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}"> #}
+    {# <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}"> #}
+
+    {% if title %}
+        <title>{{ title }} - {{ config.get('BLOG_NAME', 'Fragrance Blog') }}</title>
+    {% else %}
+        <title>{{ config.get('BLOG_NAME', 'Fragrance Blog') }}</title>
+    {% endif %}
 
     {# --- RSS Feed Link --- #}
-    <link rel="alternate" type="application/rss+xml" title="Fragrance Blog RSS Feed" href="{{ url_for('main.rss_feed', _external=True) }}">
+    <link rel="alternate" type="application/rss+xml" title="{{ config.get('BLOG_NAME', 'Fragrance Blog') }} RSS Feed" href="{{ url_for('main.rss_feed', _external=True) }}">
     {# ------------------------- #}
-   
+
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm fixed-top"> {# Added shadow and fixed-top for better look #}
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">Fragrance Blog</a>
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">{{ config.get('BLOG_NAME', 'Fragrance Blog') }}</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -30,62 +43,76 @@
                 {# --- START: Left side navigation items --- #}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.index') }}">Home</a> {# ONLY ONE Home Link #}
+                        <a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="{{ url_for('main.index') }}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.contact') }}">Contact</a> {# Contact Link Here #}
+                        <a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
                     </li>
                     <!-- Add other desired public nav items here as <li> elements -->
+                    {# Example: About Page Link #}
+                    {# <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="{{ url_for('main.about') }}">About</a>
+                    </li> #}
                 </ul>
                 {# --- END: Left side navigation items --- #}
 
 
-                {# --- START: Right side navigation items --- #}
-                <ul class="navbar-nav">
-                     {% if current_user.is_authenticated %}
-                        {% if current_user.is_admin %}
-                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('main.admin_dashboard') }}">Admin</a>
-                            </li>
-                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('main.create_post') }}">New Post</a>
-                            </li>
-                        {% endif %}
-                        <li class="nav-item">
-                            <span class="navbar-text me-2">Hi, {{ current_user.username }}!</span>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a>
-                        </li>
-                    {% else %}
-                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
-                        </li>
-                         <!-- Register link removed/commented -->
-                    {% endif %}
-                </ul>
-                {# --- END: Right side navigation items --- #}
-
-
-                {# --- START: Search Form (Usually after right-side links) --- #}
-                <form class="d-flex ms-auto" method="GET" action="{{ url_for('main.search') }}">
+                {# --- START: Search Form (Moved before right-side auth links for better flow on smaller screens) --- #}
+                <form class="d-flex my-2 my-lg-0 me-lg-3" method="GET" action="{{ url_for('main.search') }}" role="search">
                   <input class="form-control me-2" type="search" placeholder="Search Posts" aria-label="Search" name="q" value="{{ request.args.get('q', '') }}">
                   <button class="btn btn-outline-light" type="submit">Search</button>
                 </form>
                 {# --- END: Search Form --- #}
 
+                {# --- START: Right side navigation items --- #}
+                <ul class="navbar-nav">
+                     {% if current_user.is_authenticated %}
+                        {% if current_user.is_admin %}
+                             <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                  Admin
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminDropdown">
+                                  <li><a class="dropdown-item" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a></li>
+                                  <li><a class="dropdown-item" href="{{ url_for('main.create_post') }}">New Post</a></li>
+                                  <li><a class="dropdown-item" href="{{ url_for('main.register') }}">Register User</a></li>
+                                </ul>
+                              </li>
+                        {% endif %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Hi, {{ current_user.username }}!
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
+                                {# <li><a class="dropdown-item" href="{{ url_for('main.profile') }}">Profile</a></li> #}
+                                {# <li><hr class="dropdown-divider"></li> #}
+                                <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Login</a>
+                        </li>
+                         {# Add public registration link here if you implement it #}
+                         {# <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.signup' %}active{% endif %}" href="{{ url_for('main.signup') }}">Sign Up</a>
+                         </li> #}
+                    {% endif %}
+                </ul>
+                {# --- END: Right side navigation items --- #}
+
             </div> {# --- This closes the main div#navbarNav --- #}
         </div>
     </nav>
 
-    <main role="main" class="container">
+    <main role="main" class="container" style="padding-top: 70px;"> {# Added padding-top because navbar is fixed-top #}
         <div class="row">
             <div class="col-md-8">
                 {# Flash messages #}
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
                                 {{ message }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
@@ -96,27 +123,84 @@
                 {# Main content block #}
                 {% block content %}{% endblock %}
             </div>
+
+            {# --- START: DYNAMIC SIDEBAR --- #}
             <div class="col-md-4">
-                <div class="content-section">
-                    <h3>Sidebar</h3>
-                    <p class='text-muted'>You can put any information here you'd like.
-                    <ul class="list-group">
-                        <li class="list-group-item list-group-item-light">Latest Posts</li>
-                        <li class="list-group-item list-group-item-light">Announcements</li>
-                        <li class="list-group-item list-group-item-light">Etc</li>
-                    </ul>
-                    </p>
+                {# --- Recent Posts Section --- #}
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0">Recent Posts</h4>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {% if sidebar_recent_posts %}
+                            {% for r_post in sidebar_recent_posts %}
+                                <a href="{{ url_for('main.post', slug=r_post.slug) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">{{ r_post.title | truncate(40, True) }}</div>
+                                        <small class="text-muted">By {{ r_post.author.username }}</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">{{ r_post.timestamp.strftime('%b %d') }}</span>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <li class="list-group-item text-muted">No recent posts to display.</li>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# --- Popular Tags Section --- #}
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0">Popular Tags</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if sidebar_popular_tags %}
+                            {% for s_tag in sidebar_popular_tags %}
+                                <a href="{{ url_for('main.tag', tag_name=s_tag.name) }}" class="btn btn-sm btn-outline-secondary me-1 mb-2">{{ s_tag.name }}</a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">No tags available yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# --- Static About/Other Section --- #}
+                <div class="card shadow-sm">
+                     <div class="card-header bg-light">
+                        <h4 class="mb-0">About This Blog</h4>
+                    </div>
+                    <div class="card-body">
+                        <p class='text-muted'>
+                            Welcome to my fragrance journey! Discover reviews, thoughts, and explorations into the captivating world of scents.
+                        </p>
+                        <p class="mt-3">
+                            <a href="{{ url_for('main.rss_feed', _external=True) }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-rss-fill me-1" viewBox="0 0 16 16">
+                                  <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm1.5 2.5c5.523 0 10 4.477 10 10H11.5a7.5 7.5 0 0 0-7.5-7.5zM2.5 8a5 5 0 0 1 5 5H6a3.5 3.5 0 0 0-3.5-3.5zM3 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0"/>
+                                </svg>
+                                Subscribe to RSS Feed
+                            </a>
+                        </p>
+                        <p class="mt-2">
+                             {# Placeholder for Privacy Policy Link #}
+                             {# <a href="{{ url_for('main.privacy_policy') }}" class="text-decoration-none">Privacy Policy</a> #}
+                        </p>
+                    </div>
                 </div>
             </div>
+            {# --- END: DYNAMIC SIDEBAR --- #}
         </div>
     </main>
 
+    <footer class="container mt-5 py-3 border-top text-center text-muted">
+        <p>© {{ now().year }} {{ config.get('BLOG_NAME', 'Fragrance Blog') }}. All Rights Reserved.</p>
+        {# Add Privacy Policy link here too if you have one #}
+        {# <p><a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a></p> #}
+    </footer>
 
-    <!-- Optional JavaScript; choose one of the two! -->
-    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-
-
-
+    {# Your custom JS file if needed #}
+    {# <script src="{{ url_for('static', filename='custom.js') }}"></script> #}
 </body>
 </html>

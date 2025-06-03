@@ -51,3 +51,6 @@ class Config:
     REMEMBER_COOKIE_SECURE = os.environ.get('REMEMBER_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
+
+    SIDEBAR_RECENT_POSTS_COUNT = 5
+    SIDEBAR_POPULAR_TAGS_COUNT = 10
