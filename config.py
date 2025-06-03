@@ -52,5 +52,6 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
 
+    BLOG_NAME = os.environ.get('BLOG_NAME', 'My Temporarily Named Fragrance Blog')  # For title, navbar, footer
     SIDEBAR_RECENT_POSTS_COUNT = 5
     SIDEBAR_POPULAR_TAGS_COUNT = 10

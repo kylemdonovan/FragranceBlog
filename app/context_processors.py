@@ -11,7 +11,7 @@ def inject_sidebar_data():
     This includes recent posts and popular tags.
     """
     # --- Recent Posts ---
-    # Get the number of recent posts from config, default to 5
+    # Get the number of recent posts from config, default to 5 for now
     num_recent_posts = current_app.config.get('SIDEBAR_RECENT_POSTS_COUNT', 5)
     try:
         recent_posts = db.session.scalars(
