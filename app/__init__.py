@@ -18,7 +18,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
 csrf = CSRFProtect()
-mail = Mail()  # <-- NEW INSTANCE for Flask-Mail
+mail = Mail()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],  # General default limits
@@ -73,10 +73,10 @@ def create_app(config_class=Config):
     from app.routes import bp as main_bp
     app.register_blueprint(main_bp)
 
-    # --- NEW: Import and register Error Handling Blueprint ---
+    # --- Import and register Error Handling Blueprint ---
     from app.errors import bp as errors_bp  # Assuming app/errors.html exists and defines 'bp'
     app.register_blueprint(errors_bp)
-    # --- END NEW ---
+    # --- END error handling blueprint ---
 
     # Import models here to ensure they are known to Flask-Migrate
     # and available for shell context.
@@ -95,7 +95,7 @@ def create_app(config_class=Config):
             # Add other models here if you create more
         }
 
-    # --- NEW: Jinja Global Filters (Example for striptags, truncate for RSS) ---
+    # --- Jinja Global Filters (Example for striptags, truncate for RSS) ---
     import re
     from markupsafe import Markup
 
@@ -110,9 +110,9 @@ def create_app(config_class=Config):
         value_str = str(value)
         if len(value_str) <= length:
             return value_str
-        return Markup(value_str[:length - len(end)] + end)  # Markup if you expect HTML output
+        return Markup(value_str[:length - len(end)] + end)  # Markup if we expect HTML output
 
-    # --- END NEW ---
+    # --- END Jinja filters ---
 
     # Replace print with app.logger
     # These logs are good for verifying paths during startup
