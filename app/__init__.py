@@ -82,6 +82,9 @@ def create_app(config_class=Config):
     # and available for shell context.
     from app import models  # This is good.
 
+    from app.context_processors import inject_sidebar_data
+    app.context_processor(inject_sidebar_data)
+
     # Configure shell context
     @app.shell_context_processor
     def make_shell_context():

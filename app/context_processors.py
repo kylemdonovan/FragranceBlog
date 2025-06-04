@@ -1,9 +1,9 @@
 # app/context_processors.py
-from app.models import Post, Tag  # Assuming your models are in app.models
-from app import db  # Assuming your db instance is in app.__init__
+from app.models import Post, Tag
+from app import db
 import sqlalchemy as sa
 from flask import current_app  # To access app config for number of items
-
+from datetime import datetime
 
 def inject_sidebar_data():
     """
@@ -41,5 +41,6 @@ def inject_sidebar_data():
 
     return dict(
         sidebar_recent_posts=recent_posts,
-        sidebar_popular_tags=popular_tags
+        sidebar_popular_tags=popular_tags,
+        now=datetime.utcnow
     )
