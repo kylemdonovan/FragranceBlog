@@ -14,10 +14,20 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     {# ---------------------------------------------- #}
 
-    {# --- Favicon (Placeholder - Add your actual favicon link here later) --- #}
-    {# <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}"> #}
-    {# <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}"> #}
-    {# <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}"> #}
+    {# --- START: FAVICON LINKS --- #}
+    {# Basic .ico for older browsers #}
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    {# PNG versions for modern browsers - choose sizes you have #}
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    {# Optional: Apple touch icon for iOS home screens #}
+    {# <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}"> #}
+    {# Optional: For Android Chrome #}
+    {# <link rel="icon" type="image/png" sizes="192x192"  href="{{ url_for('static', filename='android-chrome-192x192.png') }}"> #}
+    {# Optional: Manifest file if your generator provided one and you want PWA-like features #}
+    {# <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}"> #}
+    {# --- END: FAVICON LINKS --- #}
+
 
     {% if title %}
         <title>{{ title }} - {{ config.get('BLOG_NAME', 'Fragrance Blog') }}</title>
