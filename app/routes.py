@@ -1,6 +1,8 @@
 # app/routes.py
 # FINAL CORRECTED Comprehensive version with Slugs, RTE Key, and Cloudinary Image Uploads
 
+from flask import make_response
+from datetime import datetime, timezone
 # NEW IMPORT for Flask-Mail
 from flask_mail import Message
 # NEW IMPORT for mail instance and limiter from app package
@@ -715,4 +717,77 @@ def serve_robots_txt():
     return send_from_directory(current_app.static_folder, 'robots.txt')
 
 
+@bp.route('/sitemap.xml')
+def sitemap():
+    """Generates an XML sitemap for search engines."""
+
+    # Initialize a list to hold all page data for the sitemap
+    pages_for_sitemap = []
+
+    # --- Define and add STATIC pages ---
+    static_page_definitions = [
+        {'endpoint': 'main.index', 'priority': '1.0', 'changefreq': 'daily'},
+        {'endpoint': 'main.contact', 'priority': '0.7', 'changefreq': 'monthly'},
+        # Example: {'endpoint': 'main.about', 'priority': '0.6', 'changefreq': 'yearly'}, # If you add an 'about' page
+    ]
+    for page_def in static_page_definitions:
+        try:  # Add try-except around url_for in case a route is temporarily undefined
+            pages_for_sitemap.append({
+                'loc': url_for(page_def['endpoint'], _external=True),
+                'lastmod': datetime.now(timezone.utc).strftime("%Y-%m-%d"),  # Current date for static pages
+                'priority': page_def['priority'],
+                'changefreq': page_def['changefreq']
+            })
+        except Exception as e:
+            current_app.logger.error(f"Error generating URL for static sitemap page '{page_def['endpoint']}': {e}",
+                                     exc_info=True)
+
+    # --- Add DYNAMIC pages: Blog Posts ---
+    try:
+        posts = db.session.scalars(sa.select(Post).order_by(Post.timestamp.desc())).all()
+        for post_item in posts:
+            try:  # Add try-except for individual post URL generation
+                pages_for_sitemap.append({
+                    'loc': url_for('main.post', slug=post_item.slug, _external=True),
+                    'lastmod': post_item.timestamp.strftime("%Y-%m-%d"),  # Use the post's actual timestamp
+                    'priority': '0.9',
+                    'changefreq': 'weekly'
+                })
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error generating URL for sitemap post (ID: {post_item.id}, Slug: {post_item.slug}): {e}",
+                    exc_info=True)
+    except Exception as e:
+        current_app.logger.error(f"Error fetching posts for sitemap: {e}", exc_info=True)
+
+    # --- Add DYNAMIC pages: Tags ---
+    try:
+        tags = db.session.scalars(sa.select(Tag).order_by(Tag.name)).all()
+        for tag_item in tags:
+            try:  # Add try-except for individual tag URL generation
+                # Optional: Only include tags that actually have posts associated.
+                # post_count = db.session.query(post_tags.c.post_id).filter_by(tag_id=tag_item.id).count()
+                # if post_count > 0:
+                pages_for_sitemap.append({
+                    'loc': url_for('main.tag', tag_name=tag_item.name, _external=True),
+                    'lastmod': datetime.now(timezone.utc).strftime("%Y-%m-%d"),  # Or find newest post with this tag
+                    'priority': '0.5',
+                    'changefreq': 'weekly'
+                })
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error generating URL for sitemap tag (ID: {tag_item.id}, Name: {tag_item.name}): {e}",
+                    exc_info=True)
+    except Exception as e:
+        current_app.logger.error(f"Error fetching tags for sitemap: {e}", exc_info=True)
+
+    # --- Render the XML template with the collected pages ---
+    sitemap_xml_content = render_template('sitemap_template.xml', pages=pages_for_sitemap)
+
+    # --- Create and return the XML response ---
+    response = make_response(sitemap_xml_content)
+    response.headers["Content-Type"] = "application/xml"
+
+    current_app.logger.info("Sitemap.xml generated successfully with %s URLs.", len(pages_for_sitemap))
+    return response
 # === End of routes.py ===
