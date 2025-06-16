@@ -1,0 +1,20 @@
+# robots.txt for FragBlogTemp
+
+User-agent: *
+Allow: /
+
+# Disallow administrative areas and login/sensitive paths
+Disallow: /admin/
+Disallow: /login
+Disallow: /logout
+Disallow: /reset_password_request
+Disallow: /reset_password/
+# Add any other specific paths o block from crawlers.
+# For example, if have user profile edit pages don't want indexed:
+# Disallow: /profile/edit/
+
+# Sitemap location(s)
+# Update with full domain when live, e.g., https://www.yourblog.com/sitemap.xml
+# For now, relative paths should work if served from the same domain.
+Sitemap: /sitemap.xml
+Sitemap: /feed.xml
