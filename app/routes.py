@@ -790,4 +790,9 @@ def sitemap():
 
     current_app.logger.info("Sitemap.xml generated successfully with %s URLs.", len(pages_for_sitemap))
     return response
+
+@bp.route('/robots.txt')
+def serve_robots_txt():
+    return send_from_directory(current_app.static_folder, 'robots.txt')
+
 # === End of routes.py ===

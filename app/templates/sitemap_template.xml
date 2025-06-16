@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+                            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+    {# Loop through each page dictionary passed from the sitemap route #}
+    {% for page_data in pages %}
+    <url>
+        <loc>{{ page_data.loc }}</loc>
+        {% if page_data.lastmod %}
+        <lastmod>{{ page_data.lastmod }}</lastmod>
+        {% endif %}
+        {% if page_data.changefreq %}
+        <changefreq>{{ page_data.changefreq }}</changefreq>
+        {% endif %}
+        {% if page_data.priority %}
+        <priority>{{ page_data.priority }}</priority>
+        {% endif %}
+    </url>
+    {% endfor %}
+
+</urlset>
