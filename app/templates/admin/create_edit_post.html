@@ -1,7 +1,7 @@
-{% extends "base.html" %} {# Or your admin base template if you have one #}
+{% extends "base.html" %}
 
 {% block content %}
-    {# TinyMCE script reference - Good to place this early if scripts block is at the end #}
+
     {% if tinymce_api_key %}
     <script src="https://cdn.tiny.cloud/1/{{ tinymce_api_key }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     {% else %}
@@ -83,8 +83,8 @@
     </div>
 
     {# TinyMCE Initialization Script #}
-    {# This should ideally be in a separate JS file or at the end of the body for better page load performance #}
-    {# but placing it here for simplicity based on your current structure. #}
+    {# PUT IN SEPARATE JS FILE LATER FOR OPTIMAL PERFORMANCE better page load performance #}
+
     {% if tinymce_api_key %}
     <script>
       document.addEventListener('DOMContentLoaded', function () { // Ensure DOM is ready
