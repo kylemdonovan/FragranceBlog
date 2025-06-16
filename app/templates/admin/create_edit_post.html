@@ -153,7 +153,7 @@
                   // console.log("TinyMCE content saved to textarea before form submission."); // For debugging
                 });
               } else {
-                   current_app.logger.error("Could not find parent form for TinyMCE textarea with selector: " + editor.settings.selector);
+                   console.error("TinyMCE editor's parent form could not be found. Selector: " + editor.settings.selector); // Changed to console.error
               }
             });
           }
