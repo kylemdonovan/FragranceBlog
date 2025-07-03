@@ -117,6 +117,49 @@ def create_app(config_class=Config):
 
     # --- END Jinja filters ---
 
+
+    @app.template_filter()
+    def striptags_filter(value):
+        if value is None: return ''
+        return Markup(re.sub(r'<[^>]+>', '', str(value)))
+
+    @app.template_filter()
+    def truncate_text_filter(value, length=255, end='...'):
+        if value is None: return ''
+        value_str = str(value)
+        if len(value_str) <= length:
+            return value_str
+        return Markup(value_str[:length - len(end)] + end)
+
+    # --- START: HIGHLIGHT FILTER ---
+    @app.template_filter('highlight') # Explicitly naming the filter 'highlight'
+    def highlight_search_term_filter(text_to_search, query_term):
+        """
+        Highlights occurrences of query_term in text_to_search.
+        Case-insensitive. Marks with <mark> HTML tag.
+        """
+        if not query_term or not text_to_search:
+            return text_to_search #
+
+        text_str = str(text_to_search)
+        try:
+
+            escaped_query = re.escape(query_term)
+
+            highlighted_text = re.sub(f'({escaped_query})', r'<mark class="search-highlight">\1</mark>', text_str, flags=re.IGNORECASE)
+            return Markup(highlighted_text) # Return as Markup so HTML isn't escaped by Jinja
+        except Exception as e:
+
+            if app and hasattr(app, 'logger'):
+                 app.logger.error(f"Error during highlighting: {e}", exc_info=True)
+            else:
+                print(f"Error during highlighting (logger not available): {e}")
+
+            if isinstance(text_to_search, Markup): #
+                return text_to_search
+            return escape(text_str) #
+    # --- END: HIGHLIGHT FILTER ---
+
     # Replace print with app.logger
     # These logs are good for verifying paths during startup
     app.logger.info(f"Flask App Root Path: {app.root_path}")
