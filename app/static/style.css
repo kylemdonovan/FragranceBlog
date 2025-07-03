@@ -13,7 +13,7 @@
   --clr-link: var(--clr-primary);
   --clr-link-hover: #003f4d; /* Darker teal */
 
-  /* Typography (Examples - Consider loading web fonts later) */
+  /* Typography (web fonts later) */
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: 'Georgia', Times, 'Times New Roman', serif; /* Classic touch */
   --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -60,14 +60,12 @@ a:hover {
 }
 
 /* --- 3. Layout & Containers --- */
-/* Assuming Bootstrap's .container and .row are used */
 main.container {
   padding-top: var(--spacing-base);
   padding-bottom: var(--spacing-large);
 }
 
 /* --- 4. Navbar --- */
-/* Keep Bootstrap's dark theme but refine colors */
 .navbar-dark {
   background-color: var(--clr-primary) !important; /* Use our primary color */
 }
@@ -240,7 +238,7 @@ legend {
 
 
 /* --- 10. Sidebar (Example) --- */
-/* If you give the sidebar div a class="sidebar-section" */
+
 .sidebar-section .content-section {
     background-color: var(--clr-background); /* Blend with body bg */
     box-shadow: none; /* Remove shadow */
@@ -270,4 +268,10 @@ legend {
 }
 
 
-/* --- Add More Specific Styles Below --- */
+.search-highlight {
+    background-color: #fff3cd; /* A light, non-obnoxious yellow */
+    padding: 0.1em 0.2em;
+    border-radius: 3px;
+    font-weight: 600; /* Bolder than normal text */
+    color: #664d03;   /* Darker text for contrast */
+}
