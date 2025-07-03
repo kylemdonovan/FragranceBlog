@@ -2,7 +2,7 @@
 
 /* === 1. Variables & Root Settings === */
 :root {
-  /* Color Palette (Examples - Adjust to your taste!) */
+  /* Color Palette (Examples - Adjust to my palette!) */
   --clr-background: #fdfdfd; /* Very light grey/off-white */
   --clr-text: #333a40;        /* Dark grey-blue for text */
   --clr-primary: #005f73;    /* Deep Teal/Peacock Blue (Sophisticated, Masculine) */
@@ -15,7 +15,7 @@
 
   /* Typography (web fonts later) */
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: 'Georgia', Times, 'Times New Roman', serif; /* Classic touch */
+  --font-serif: 'Georgia', Times, 'Times New Roman', serif; /* *** Classic touch but change this later if I don't love it*/
   --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Spacing & Borders */
@@ -36,11 +36,11 @@ body {
 
 /* --- 2. Typography --- */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif); /* Serif for headings adds refinement */
-  color: var(--clr-primary);     /* Use primary color for main headings */
+  font-family: var(--font-serif); /* Serif for headings adds 'refinement' */
+  color: var(--clr-primary);     
   margin-top: var(--spacing-large);
   margin-bottom: var(--spacing-base);
-  font-weight: 600; /* Semi-bold */
+  font-weight: 600; 
 }
 
 /* Adjust specific heading sizes if needed */
@@ -67,7 +67,7 @@ main.container {
 
 /* --- 4. Navbar --- */
 .navbar-dark {
-  background-color: var(--clr-primary) !important; /* Use our primary color */
+  background-color: var(--clr-primary) !important; 
 }
 .navbar-dark .navbar-brand {
   font-family: var(--font-serif); /* Match headings */
@@ -76,7 +76,7 @@ main.container {
   border: none !important; /* Remove ridiculous test border */
 }
 .navbar-dark .navbar-nav .nav-link {
-  color: rgba(255, 255, 255, 0.85) !important; /* Slightly brighter default */
+  color: rgba(255, 255, 255, 0.85) !important; 
 }
 .navbar-dark .navbar-nav .nav-link:hover,
 .navbar-dark .navbar-nav .nav-link:focus,
@@ -112,8 +112,8 @@ main.container {
   margin-bottom: var(--spacing-base);
   border-bottom: var(--border-width-base) solid var(--clr-light-grey);
   font-size: 0.875rem;
-  color: var(--clr-secondary); /* Use secondary grey */
-  background-color: transparent !important; /* Remove test background */
+  color: var(--clr-secondary); 
+  background-color: transparent !important;
 }
 .article-metadata a {
   color: var(--clr-secondary); /* Make author name blend more */
@@ -124,9 +124,9 @@ main.container {
 }
 
 .article-title {
-  font-family: var(--font-serif); /* Already set by h2, but explicit */
-  color: var(--clr-text); /* Use main text color for titles */
-  margin-bottom: var(--spacing-small); /* Less space after title */
+  font-family: var(--font-serif); 
+  color: var(--clr-text); 
+  margin-bottom: var(--spacing-small); /* Reduce space after title */
 }
 .article-title:hover {
   color: var(--clr-primary); /* Use primary color on hover */
@@ -188,16 +188,15 @@ main.container {
   font-size: 0.8rem;
   padding: 0.35em 0.65em;
   font-weight: 500; /* Less bold */
-  /* Using Bootstrap's standard secondary badge, override if needed */
   /* background-color: var(--clr-secondary) !important; */
   /* color: var(--clr-white) !important; */
-  border-radius: var(--border-radius-base) !important; /* Match other rounding */
+  border-radius: var(--border-radius-base) !important; /* Match other rounding consistently */
 }
 .post-tags a.badge:hover {
     background-color: var(--clr-primary) !important; /* Use primary color on hover */
     color: var(--clr-white) !important;
 }
-/* Highlight current tag on tag page */
+/* Highlights current tag on tag page */
 .tag-highlight {
     background-color: var(--clr-primary) !important;
     color: var(--clr-white) !important;
@@ -205,12 +204,12 @@ main.container {
 
 /* --- 8. Comments Styling --- */
 .comment {
-  border-bottom: var(--border-width-base) solid var(--clr-light-grey); /* Subtle line */
+  border-bottom: var(--border-width-base) solid var(--clr-light-grey); 
   padding-top: var(--spacing-base);
   padding-bottom: var(--spacing-base);
-  margin-bottom: 0; /* Remove default margin if border provides separation */
-  background: transparent !important; /* Remove test background */
-  border-left: none !important; /* Remove test border */
+  margin-bottom: 0; 
+  background: transparent !important; 
+  border-left: none !important; 
   border-right: none !important;
   border-top: none !important;
 }
@@ -228,20 +227,17 @@ main.container {
 }
 
 /* --- 9. Forms --- */
-/* General form styling is mostly handled by Bootstrap, but add tweaks */
 legend {
     font-family: var(--font-serif);
     font-weight: 600;
 }
-/* Adjustments for admin forms if needed */
-/* e.g., .admin-form-section { ... } */
 
 
-/* --- 10. Sidebar (Example) --- */
 
+/* --- 10. Sidebar --- */
 .sidebar-section .content-section {
     background-color: var(--clr-background); /* Blend with body bg */
-    box-shadow: none; /* Remove shadow */
+    box-shadow: none; /* Shadow begone */
 }
 .sidebar-section h3 {
     color: var(--clr-secondary);
@@ -267,7 +263,7 @@ legend {
     color: var(--clr-secondary);
 }
 
-
+/* --- 12. Search Highlight --- */
 .search-highlight {
     background-color: #fff3cd; /* A light, non-obnoxious yellow */
     padding: 0.1em 0.2em;
