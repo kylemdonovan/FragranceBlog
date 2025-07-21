@@ -114,6 +114,15 @@ def custom_truncate(text, length=300, end='...'):
     return text_str[:length - len(end)] + end
 
 
+# === Health Check Route for Pinger Operation===
+@bp.route('/healthz')
+def health_check():
+    """
+    A basic endpoint for uptime monitoring services
+    to hit. It just returns a '200 OK' response aka I AM ALIVE.
+    """
+    return "OK", 200
+
 # === Public Routes ===
 
 @bp.route('/')
