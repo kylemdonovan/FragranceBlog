@@ -15,17 +15,23 @@ class Config:
     if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     elif not SQLALCHEMY_DATABASE_URI:
-        project_root = os.path.dirname(basedir)
-        instance_folder_path = os.path.join(project_root, 'instance') # Store DB in instance folder
-        os.makedirs(instance_folder_path, exist_ok=True)
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_folder_path, 'app.db')
+        PROJECT_ROOT = os.path.dirname(basedir)  # This should resolve to my local copy that nobody needs to know
+        INSTANCE_FOLDER = os.path.join(PROJECT_ROOT, 'instance')
+
+        # Ensure the instance folder exists
+        os.makedirs(INSTANCE_FOLDER, exist_ok=True)
+
+        # Define the absolute path to the database file
+        DB_PATH = os.path.join(INSTANCE_FOLDER, 'app.db')
+
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DB_PATH
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Disable modification tracking (saves resources)
-    
-    
+
+
     # --- TINYMCE CONFIG ---
     TINYMCE_API_KEY = os.environ.get('TINYMCE_API_KEY')
-    
+
     # --- CLOUDINARY CONFIG ---
     CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
     CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
