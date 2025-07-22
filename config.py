@@ -8,8 +8,6 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
     # SECRET_KEY is crucial for session security and CSRF protection
-    # It should be a long, random string.
-    # We'll load it from an environment variable for security.
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-should-really-change-this'
 
     # Database configuration
