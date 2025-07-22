@@ -186,6 +186,43 @@ def post(slug):
                            pagination_comments=pagination_comments)
 
 
+# === NEW: Public User Registration Route ===
+@bp.route('/signup', methods=['GET', 'POST'])
+@limiter.limit(lambda: current_app.config.get('SIGNUP_RATE_LIMIT',
+                                              "5 per hour;20 per day"))  # Good to rate limit signups
+def signup():
+    """Handles public user registration."""
+    if current_user.is_authenticated:
+        # If user is already logged in, just send them to the homepage.
+        return redirect(url_for('main.index'))
+
+    form = RegistrationForm()  # We can reuse the same RegistrationForm
+    if form.validate_on_submit():
+        # Create a new user but explicitly set is_admin to False for security
+        user = User(
+            username=form.username.data,
+            email=form.email.data,
+            is_admin=False  # <<< CRITICAL: Public signups are NEVER admins.
+        )
+        user.set_password(form.password.data)
+        db.session.add(user)
+        try:
+            db.session.commit()
+            # Log them in automatically after they sign up
+            login_user(user)
+            flash('Congratulations, your account has been created!', 'success')
+            return redirect(url_for('main.index'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error creating public user {form.username.data}: {e}",
+                exc_info=True)
+            flash(
+                'Could not create account due to a server error. Please try again.',
+                'danger')
+
+    return render_template('signup.html', title='Sign Up', form=form)
+
 @bp.route('/search')
 def search():
     """Handles post search queries."""
