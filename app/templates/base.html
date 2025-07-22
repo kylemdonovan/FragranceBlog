@@ -104,9 +104,10 @@
                             <a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Login</a>
                         </li>
                          {# Add public registration link here if you implement it #}
-                         {# <li class="nav-item">
+                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'main.signup' %}active{% endif %}" href="{{ url_for('main.signup') }}">Sign Up</a>
-                         </li> #}
+                         </li>
+
                     {% endif %}
                 </ul>
                 {# --- END: Right side navigation items --- #}
