@@ -227,7 +227,6 @@ def signup():
 
 
 # In app/routes.py
-
 @bp.route('/contact', methods=['GET', 'POST'])
 def contact():
     """Displays contact form and handles submission by sending an email."""
@@ -240,45 +239,37 @@ def contact():
 
         # --- Get all the required config values first ---
         admin_email_recipient = current_app.config.get('ADMIN_EMAIL')
-        default_sender = current_app.config.get('MAIL_DEFAULT_SENDER',
-                                                current_app.config.get(
-                                                    'MAIL_USERNAME'))
+        mail_username = current_app.config.get('MAIL_USERNAME')
+        mail_default_sender = current_app.config.get('MAIL_DEFAULT_SENDER')
+        default_sender = mail_default_sender or mail_username  # The fallback logic
         mail_server = current_app.config.get('MAIL_SERVER')
 
-        # --- START: INJECTED DEBUG LOGGING ---
-        # This is our check. If ANY of these are missing/empty, the block will run.
+        # --- START: SCREAMING DEBUG BLOCK ---
         if not admin_email_recipient or not default_sender or not mail_server:
-            # Log the state of all relevant variables to find the culprit
-            current_app.logger.error(
-                "--- CONTACT FORM FAILED: Mail configuration check failed. ---")
-            current_app.logger.error(
-                f"Value for ADMIN_EMAIL from config: '{admin_email_recipient}'")
-            current_app.logger.error(
-                f"Value for MAIL_USERNAME from config: '{current_app.config.get('MAIL_USERNAME')}'")
-            current_app.logger.error(
-                f"Value for MAIL_DEFAULT_SENDER from config: '{current_app.config.get('MAIL_DEFAULT_SENDER')}'")
-            current_app.logger.error(
-                f"Final calculated default_sender value: '{default_sender}'")
-            current_app.logger.error(
-                f"Value for MAIL_SERVER from config: '{mail_server}'")
-            current_app.logger.error("--- END OF CONFIG CHECK ---")
-
-            flash(
-                "Sorry, the contact form is currently unavailable. Please try again later.",
-                'danger')
-            return redirect(
-                url_for('main.contact'))  # Important to redirect here
-
-        # --- END: INJECTED DEBUG LOGGING ---
-        else:
-            # If the check passes, we proceed to try sending the email.
-            msg = Message(
-                subject=f"[{current_app.config.get('BLOG_NAME', 'Fragrance Blog')} Contact] {subject_from_form}",
-                sender=default_sender,
-                recipients=[admin_email_recipient],
-                reply_to=sender_email
+            # Create a very detailed debug message
+            debug_message = (
+                f"DEBUG: Config Check Failed! "
+                f"ADMIN_EMAIL='{admin_email_recipient}', "
+                f"MAIL_USERNAME='{mail_username}', "
+                f"MAIL_DEFAULT_SENDER='{mail_default_sender}', "
+                f"FINAL default_sender='{default_sender}', "
+                f"MAIL_SERVER='{mail_server}'"
             )
-            msg.body = f"""
+            current_app.logger.error(debug_message)
+            flash(debug_message,
+                  'danger')  # Flash the debug message to the screen
+            return redirect(url_for('main.contact'))
+
+        # --- END: SCREAMING DEBUG BLOCK ---
+
+        # If the check passes, the code continues here
+        msg = Message(
+            subject=f"[{current_app.config.get('BLOG_NAME', 'Fragrance Blog')} Contact] {subject_from_form}",
+            sender=default_sender,
+            recipients=[admin_email_recipient],
+            reply_to=sender_email
+        )
+        msg.body = f"""
 You have received a new message from your blog contact form:
 
 Name: {name}
@@ -290,20 +281,20 @@ Message:
 ---
 Reply directly to {sender_email}.
 """
-            try:
-                mail.send(msg)
-                current_app.logger.info(
-                    f"Contact form email sent from {sender_email} to {admin_email_recipient}")
-                flash(
-                    'Your message has been sent successfully! We will get back to you soon.',
-                    'success')
-            except Exception as e:
-                current_app.logger.error(
-                    f"Failed to send contact form email from {sender_email}: {e}",
-                    exc_info=True)
-                flash(
-                    "Sorry, we couldn't send your message at this time due to a server error. Please try again later.",
-                    'danger')
+        try:
+            mail.send(msg)
+            current_app.logger.info(
+                f"Contact form email sent from {sender_email} to {admin_email_recipient}")
+            flash(
+                'Your message has been sent successfully! We will get back to you soon.',
+                'success')
+        except Exception as e:
+            current_app.logger.error(
+                f"Failed to send contact form email from {sender_email}: {e}",
+                exc_info=True)
+            flash(
+                "Sorry, we couldn't send your message at this time due to a server error. Please check the logs.",
+                'danger')
 
         return redirect(url_for('main.contact'))
 
