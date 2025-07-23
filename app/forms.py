@@ -81,8 +81,8 @@ class ResetPasswordForm(FlaskForm):
         'Confirm New Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match.')])
     submit = SubmitField('Reset Password')
 
-# === ADMIN CHANGE PASSWORD FORM ===
-class AdminChangePasswordForm(FlaskForm):
+# === GENERAL CHANGE PASSWORD FORM ===
+class ChangePasswordForm(FlaskForm): # Was AdminChangePasswordForm
     current_password = PasswordField('Current Password', validators=[DataRequired()])
     new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
     new_password2 = PasswordField(
@@ -91,3 +91,27 @@ class AdminChangePasswordForm(FlaskForm):
     )
     submit = SubmitField('Change Password')
 
+
+# === CHANGE USERNAME FORM ===
+class ChangeUsernameForm(FlaskForm):
+    new_username = StringField('New Username', validators=[DataRequired(),
+                                                           Length(min=3,
+                                                                  max=64)])
+    submit = SubmitField('Change Username')
+
+    def __init__(self, original_username, *args, **kwargs):
+        super(ChangeUsernameForm, self).__init__(*args, **kwargs)
+        self.original_username = original_username
+
+    def validate_new_username(self, new_username):
+        # Check if the new username is the same as the old one
+        if new_username.data.lower() == self.original_username.lower():
+            # No need to check the database if the name isn't changing
+            return
+
+        # Check if the new username is already taken by someone else
+        user = db.session.scalar(
+            db.select(User).where(User.username == new_username.data))
+        if user is not None:
+            raise ValidationError(
+                'That username is already taken. Please choose a different one.')
