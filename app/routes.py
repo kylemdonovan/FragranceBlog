@@ -3,10 +3,10 @@
 
 from flask import make_response
 from datetime import datetime, timezone
-# NEW IMPORT for Flask-Mail
+
 from flask_mail import Message
-# NEW IMPORT for mail instance and limiter from app package
-from app import mail, limiter  # Assuming limiter is initialized in app.__init__
+
+from app import mail, limiter
 
 from feedgen.feed import FeedGenerator
 from flask import Response, url_for, send_from_directory  # Added send_from_directory for robots.txt
@@ -23,18 +23,18 @@ import sqlalchemy as sa
 from urllib.parse import urlsplit
 from functools import wraps
 import os
-import re  # NEW IMPORT for basic striptags/truncate in RSS
+import re  # no gg
 
 # --- App Specific Imports ---
 from app import db
-from app.models import User, Post, Comment, Tag  # Ensure Post model has slug, image_url, AND image_public_id fields
+from app.models import User, Post, Comment, Tag
 
 # --- Image Handling Imports ---
 from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
 
-# cloudinary.api might be needed if using advanced API features, but uploader.destroy is sufficient for deletion
+
 
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
@@ -118,12 +118,16 @@ def custom_truncate(text, length=300, end='...'):
 
 # === Health Check Route for Pinger Operation===
 @bp.route('/healthz')
+@limiter.exempt
 def health_check():
     """
     A basic endpoint for uptime monitoring services
     to hit. It just returns a '200 OK' response aka I AM ALIVE.
+    Added exemption :)
     """
     return "OK", 200
+
+
 
 # === Public Routes ===
 
@@ -188,7 +192,7 @@ def post(slug):
                            pagination_comments=pagination_comments)
 
 
-# === NEW: Public User Registration Route ===
+# === Public User Registration Route ===
 @bp.route('/signup', methods=['GET', 'POST'])
 @limiter.limit(lambda: current_app.config.get('SIGNUP_RATE_LIMIT',
                                               "5 per hour;20 per day"))  # Good to rate limit signups
