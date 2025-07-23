@@ -759,6 +759,41 @@ def rss_feed():
 def serve_robots_txt():
     return send_from_directory(current_app.static_folder, 'robots.txt')
 
+# === <<< SEARCH ROUTE >>> ---
+@bp.route('/search')
+def search():
+    """Handles post search queries."""
+    query_param = request.args.get('q', '', type=str).strip()
+
+    if not query_param:
+        flash("Please enter a search term.", "info")
+        # Render the search results page but with no results
+        return render_template('search_results.html', title="Search", query=query_param, posts=[], pagination=None)
+
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config.get('SEARCH_RESULTS_PER_PAGE', 10)
+    search_term = f"%{query_param}%"
+    query = sa.select(Post).where(
+        sa.or_(
+            Post.title.ilike(search_term),
+            Post.body.ilike(search_term)
+        )
+    ).order_by(Post.timestamp.desc())
+
+    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    posts = pagination.items
+
+    next_url = url_for('main.search', q=query_param, page=pagination.next_num) if pagination.has_next else None
+    prev_url = url_for('main.search', q=query_param, page=pagination.prev_num) if pagination.has_prev else None
+
+    return render_template('search_results.html',
+                           title=f"Search Results for '{query_param}'",
+                           query=query_param,
+                           posts=posts,
+                           next_url=next_url,
+                           prev_url=prev_url,
+                           pagination=pagination)
+# --- <<< END SEARCH ROUTE >>> ---
 
 @bp.route('/sitemap.xml')
 def sitemap():
