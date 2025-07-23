@@ -172,4 +172,3 @@ def create_app(config_class=Config):
         app.logger.warning("Mail not configured (MAIL_SERVER is not set).")
 
     return app
-

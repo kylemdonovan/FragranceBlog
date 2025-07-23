@@ -225,40 +225,8 @@ def signup():
 
     return render_template('signup.html', title='Sign Up', form=form)
 
-@bp.route('/search')
-def search():
-    """Handles post search queries."""
-    query_param = request.args.get('q', '', type=str).strip()
 
-    if not query_param:
-        flash("Please enter a search term.", "info")
-        # Optionally redirect to index or show search page with a message
-        return render_template('search_results.html', title="Search", query=query_param, posts=[], pagination=None)
-
-    page = request.args.get('page', 1, type=int)
-    per_page = current_app.config.get('SEARCH_RESULTS_PER_PAGE', 10)
-    search_term = f"%{query_param}%"
-    query = sa.select(Post).where(
-        sa.or_(
-            Post.title.ilike(search_term),
-            Post.body.ilike(search_term)  # Be mindful of searching large TEXT fields for performance
-        )
-    ).order_by(Post.timestamp.desc())
-
-    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
-    posts = pagination.items
-
-    next_url = url_for('main.search', q=query_param, page=pagination.next_num) if pagination.has_next else None
-    prev_url = url_for('main.search', q=query_param, page=pagination.prev_num) if pagination.has_prev else None
-
-    return render_template('search_results.html',
-                           title=f"Search Results for '{query_param}'",
-                           query=query_param,
-                           posts=posts,
-                           next_url=next_url,
-                           prev_url=prev_url,
-                           pagination=pagination)
-
+# In app/routes.py
 
 @bp.route('/contact', methods=['GET', 'POST'])
 def contact():
@@ -270,16 +238,40 @@ def contact():
         subject_from_form = form.subject.data
         message_body = form.message.data
 
+        # --- Get all the required config values first ---
         admin_email_recipient = current_app.config.get('ADMIN_EMAIL')
-        default_sender = current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        default_sender = current_app.config.get('MAIL_DEFAULT_SENDER',
+                                                current_app.config.get(
+                                                    'MAIL_USERNAME'))
+        mail_server = current_app.config.get('MAIL_SERVER')
 
-        if not admin_email_recipient or not default_sender or not current_app.config.get('MAIL_SERVER'):
+        # --- START: INJECTED DEBUG LOGGING ---
+        # If ANY of these are missing/empty, the block will run.
+        if not admin_email_recipient or not default_sender or not mail_server:
+            # Log the state of all relevant variables to find the culprit
             current_app.logger.error(
-                "Mail (ADMIN_EMAIL, MAIL_DEFAULT_SENDER, or MAIL_SERVER) not configured. Cannot send contact message.")
-            flash("Sorry, the contact form is currently unavailable. Please try again later.", 'danger')
-            current_app.logger.info(
-                f"DEV MODE: Contact form submission (mail not configured):\nName: {name}\nEmail: {sender_email}\nSubject: {subject_from_form}\nMessage: {message_body}")
+                "--- CONTACT FORM FAILED: Mail configuration check failed. ---")
+            current_app.logger.error(
+                f"Value for ADMIN_EMAIL from config: '{admin_email_recipient}'")
+            current_app.logger.error(
+                f"Value for MAIL_USERNAME from config: '{current_app.config.get('MAIL_USERNAME')}'")
+            current_app.logger.error(
+                f"Value for MAIL_DEFAULT_SENDER from config: '{current_app.config.get('MAIL_DEFAULT_SENDER')}'")
+            current_app.logger.error(
+                f"Final calculated default_sender value: '{default_sender}'")
+            current_app.logger.error(
+                f"Value for MAIL_SERVER from config: '{mail_server}'")
+            current_app.logger.error("--- END OF CONFIG CHECK ---")
+
+            flash(
+                "Sorry, the contact form is currently unavailable. Please try again later.",
+                'danger')
+            return redirect(
+                url_for('main.contact'))
+
+        # --- END: INJECTED DEBUG LOGGING ---
         else:
+            # If the check passes,  proceed to try sending the email.
             msg = Message(
                 subject=f"[{current_app.config.get('BLOG_NAME', 'Fragrance Blog')} Contact] {subject_from_form}",
                 sender=default_sender,
@@ -300,10 +292,15 @@ Reply directly to {sender_email}.
 """
             try:
                 mail.send(msg)
-                current_app.logger.info(f"Contact form email sent from {sender_email} to {admin_email_recipient}")
-                flash('Your message has been sent successfully! We will get back to you soon.', 'success')
+                current_app.logger.info(
+                    f"Contact form email sent from {sender_email} to {admin_email_recipient}")
+                flash(
+                    'Your message has been sent successfully! We will get back to you soon.',
+                    'success')
             except Exception as e:
-                current_app.logger.error(f"Failed to send contact form email from {sender_email}: {e}", exc_info=True)
+                current_app.logger.error(
+                    f"Failed to send contact form email from {sender_email}: {e}",
+                    exc_info=True)
                 flash(
                     "Sorry, we couldn't send your message at this time due to a server error. Please try again later.",
                     'danger')
@@ -311,7 +308,6 @@ Reply directly to {sender_email}.
         return redirect(url_for('main.contact'))
 
     return render_template('contact.html', title='Contact Us', form=form)
-
 
 # === Authentication Routes ===
 
