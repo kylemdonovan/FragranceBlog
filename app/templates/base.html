@@ -86,6 +86,10 @@
                                   <li><a class="dropdown-item" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.create_post') }}">New Post</a></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.register') }}">Register User</a></li>
+                                  {# --- START: ADDED LINK --- #}
+                                  <li><hr class="dropdown-divider"></li>
+                                  <li><a class="dropdown-item" href="{{ url_for('main.admin_account') }}">My Account</a></li>
+                                  {# --- END: ADDED LINK --- #}
                                 </ul>
                               </li>
                         {% endif %}
@@ -94,8 +98,12 @@
                                 Hi, {{ current_user.username }}!
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
-                                {# <li><a class="dropdown-item" href="{{ url_for('main.profile') }}">Profile</a></li> #}
-                                {# <li><hr class="dropdown-divider"></li> #}
+                                {# --- START: ADDED LINK (for all logged-in users, even non-admins) --- #}
+                                {# If you only want admins to see this, move it inside the "if current_user.is_admin" block #}
+                                {% if current_user.is_admin %}
+                                <li><a class="dropdown-item" href="{{ url_for('main.admin_account') }}">My Account</a></li>
+                                {% endif %}
+                                {# --- END: ADDED LINK --- #}
                                 <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
                             </ul>
                         </li>

@@ -74,8 +74,8 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
 
     # --- Import and register Error Handling Blueprint ---
-    from app.errors import bp as errors_bp  # Assuming app/errors.html exists and defines 'bp'
-    app.register_blueprint(errors_bp)
+#    from app.errors import bp as errors_bp
+#    app.register_blueprint(errors_bp)
     # --- END error handling blueprint ---
 
     # Import models here to ensure they are known to Flask-Migrate

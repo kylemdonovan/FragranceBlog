@@ -11,7 +11,9 @@ from app import mail, limiter  # Assuming limiter is initialized in app.__init__
 from feedgen.feed import FeedGenerator
 from flask import Response, url_for, send_from_directory  # Added send_from_directory for robots.txt
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ContactForm, RequestPasswordResetForm,
-                       ResetPasswordForm)  # Ensured ResetPasswordForm is here
+                       ResetPasswordForm, AdminChangePasswordForm)  # Ensured ResetPasswordForm is here
+
+
 
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
@@ -836,5 +838,44 @@ def sitemap():
 
     current_app.logger.info("Sitemap.xml generated successfully with %s URLs.", len(pages_for_sitemap))
     return response
+
+
+
+# === ADMIN ACCOUNT MANAGEMENT ROUTE ===
+@bp.route('/admin/account', methods=['GET', 'POST'])
+@admin_required # Only admins can access this
+# def admin_account():
+#     # Temporarily bypass the form for testing
+#    return render_template('admin/account_test.html', title='Admin Account Test')
+@admin_required
+def admin_account():
+    """Allows an admin to change their own password."""
+    password_form = AdminChangePasswordForm()
+
+    if password_form.validate_on_submit():
+        # Check if the current password is correct
+        if current_user.check_password(password_form.current_password.data):
+            # Set the new password
+            current_user.set_password(password_form.new_password.data)
+            try:
+                db.session.commit()
+                flash('Your password has been changed successfully!', 'success')
+                # Log the user out for security after a password change
+                logout_user()
+                return redirect(url_for('main.login'))
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error changing password for user {current_user.username}: {e}", exc_info=True)
+                flash('An error occurred while changing your password. Please try again.', 'danger')
+        else:
+            flash('Incorrect current password. Please try again.', 'danger')
+
+    # I can add more forms here later, like for changing email/username
+    return render_template('admin/account.html',
+                           title='Admin Account',
+                           password_form=password_form)
+
+
+
 
 # === End of routes.py ===

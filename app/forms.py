@@ -80,3 +80,14 @@ class ResetPasswordForm(FlaskForm):
     password2 = PasswordField(
         'Confirm New Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match.')])
     submit = SubmitField('Reset Password')
+
+# === ADMIN CHANGE PASSWORD FORM ===
+class AdminChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
+    new_password2 = PasswordField(
+        'Confirm New Password',
+        validators=[DataRequired(), EqualTo('new_password', message='New passwords must match.')]
+    )
+    submit = SubmitField('Change Password')
+
