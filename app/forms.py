@@ -43,7 +43,7 @@ class PostForm(FlaskForm):
         FileSize(max_size=5 * 1024 * 1024) # Example: Max 5MB size limit
     ])
     
-    tags = StringField('Tags (comma-separated, optional)', validators = [Length(max=200)])
+    tags = StringField('Tags (comma-separated, optional)', validators = [Length(max=1000)])
     
     submit = SubmitField('Publish Post')
 
