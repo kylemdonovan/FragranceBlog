@@ -11,7 +11,7 @@ from app import mail, limiter
 from feedgen.feed import FeedGenerator
 from flask import Response, url_for, send_from_directory  # Added send_from_directory for robots.txt
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ContactForm, RequestPasswordResetForm,
-                       ResetPasswordForm, AdminChangePasswordForm)  # Ensured ResetPasswordForm is here
+                       ResetPasswordForm, ChangePasswordForm)  # Ensured ResetPasswordForm is here
 
 
 
