@@ -115,13 +115,11 @@
         <nav aria-label="Comment navigation">
           <ul class="pagination justify-content-center mt-3">
             {% if prev_url %}
-              {# NOTE: This comment pagination link will need to change for slugs later #}
               <li class="page-item"><a class="page-link" href="{{ url_for('main.post', slug=post.slug, page=comments.prev_num) }}">Previous Comments</a></li> {# Assuming route passes prev_num #}
             {% else %}
               <li class="page-item disabled"><span class="page-link">Previous Comments</span></li>
             {% endif %}
             {% if next_url %}
-               {# NOTE: This comment pagination link will need to change for slugs later #}
               <li class="page-item"><a class="page-link" href="{{ url_for('main.post', slug=post.slug, page=comments.next_num) }}">Next Comments</a></li> {# Assuming route passes next_num #}
             {% else %}
               <li class="page-item disabled"><span class="page-link">Next Comments</span></li>
