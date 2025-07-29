@@ -749,6 +749,72 @@ def rss_feed():
     return Response(rss_feed_xml, mimetype='application/rss+xml')
 
 
+# === EDIT COMMENT ROUTE ===
+@bp.route('/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_comment(comment_id):
+    """Allows a user to edit their own comment."""
+    # Find the comment by its ID, or return 404
+    comment = db.get_or_404(Comment, comment_id)
+
+    # SECURITY CHECK: Ensure the current user is the author OR an admin
+    if comment.commenter != current_user and not current_user.is_admin:
+        flash('You do not have permission to edit this comment.', 'danger')
+        return redirect(url_for('main.post', slug=comment.post.slug))
+
+    form = EditCommentForm()
+    if form.validate_on_submit():
+        # Update the comment's body with the form data
+        comment.body = form.body.data
+        try:
+            db.session.commit()
+            flash('Your comment has been updated.', 'success')
+            # Redirect back to the post the comment belongs to
+            return redirect(url_for('main.post', slug=comment.post.slug,
+                                    _anchor=f'comment-{comment.id}'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error updating comment {comment_id}: {e}", exc_info=True)
+            flash(
+                'An error occurred while updating your comment. Please try again.',
+                'danger')
+
+    # On a GET request, pre-populate the form with the existing comment text
+    elif request.method == 'GET':
+        form.body.data = comment.body
+
+    return render_template('edit_comment.html', title='Edit Comment', form=form,
+                           comment=comment)
+
+
+# === DELETE COMMENT ROUTE ===
+@bp.route('/comment/<int:comment_id>/delete',
+          methods=['POST'])  # Use POST for deletions
+@login_required
+def delete_comment(comment_id):
+    """Allows a user to delete their own comment."""
+    comment = db.get_or_404(Comment, comment_id)
+    post_slug = comment.post.slug  # Save the slug before deleting the comment
+
+    # SECURITY CHECK: Ensure the current user is the author OR an admin
+    if comment.commenter != current_user and not current_user.is_admin:
+        flash('You do not have permission to delete this comment.', 'danger')
+        return redirect(url_for('main.post', slug=post_slug))
+
+    try:
+        db.session.delete(comment)
+        db.session.commit()
+        flash('Your comment has been deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting comment {comment_id}: {e}",
+                                 exc_info=True)
+        flash('An error occurred while deleting your comment.', 'danger')
+
+    return redirect(url_for('main.post', slug=post_slug))
+
+
 # Route to serve robots.txt from the static folder
 @bp.route('/robots.txt')
 def serve_robots_txt():

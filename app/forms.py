@@ -91,6 +91,10 @@ class ChangePasswordForm(FlaskForm): # Was AdminChangePasswordForm
     )
     submit = SubmitField('Change Password')
 
+# === EDIT COMMENT FORM ===
+class EditCommentForm(FlaskForm):
+    body = TextAreaField('Your Comment', validators=[DataRequired(), Length(min=1, max=500)])
+    submit = SubmitField('Edit Comment')
 
 # === CHANGE USERNAME FORM ===
 class ChangeUsernameForm(FlaskForm):
