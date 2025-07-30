@@ -97,6 +97,10 @@ class Post(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+    # FIELDS FOR DRAFT/PUBLISH
+    status = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    published_at = db.Column(db.DateTime, index=True, nullable = True)
+
     # Relationships
     comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     tags = db.relationship('Tag', secondary=post_tags, lazy='select',
