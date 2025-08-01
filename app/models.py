@@ -21,7 +21,7 @@ post_tags = db.Table('post_tags',
 # Flask-Login user loader callback
 @login.user_loader
 def load_user(id):
-    # Use db.session.get for primary key lookup, which is efficient
+    # Use db.session.get for primary key lookup, which is efficient, probably
     return db.session.get(User, int(id))
 
 
@@ -115,7 +115,7 @@ class Post(db.Model):
 
         slug_candidate = base_slug
         counter = 1
-        # Optimized check: Only use the more efficient SQLAlchemy 2.0 style query
+
         while db.session.scalar(
                 sa.select(Post.id).filter_by(slug=slug_candidate).limit(1)):  # Added .limit(1) for efficiency
             slug_candidate = f"{base_slug}-{counter}"
