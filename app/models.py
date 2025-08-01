@@ -78,7 +78,6 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, index=True, nullable=False)
 
-    # Relationship back to posts (already defined in Post model's backref)
     # posts = db.relationship('Post', secondary=post_tags, back_populates='tags', lazy='dynamic') # If using back_populates
 
     def __repr__(self):
@@ -104,7 +103,7 @@ class Post(db.Model):
     # Relationships
     comments = db.relationship('Comment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
     tags = db.relationship('Tag', secondary=post_tags, lazy='select',
-                           backref=db.backref('posts', lazy='dynamic'))  # 'select' is often good for tags
+                           backref=db.backref('posts', lazy='dynamic'))
 
     @staticmethod
     def generate_unique_slug(title_to_slugify):  # Renamed parameter for clarity
@@ -117,7 +116,7 @@ class Post(db.Model):
         counter = 1
 
         while db.session.scalar(
-                sa.select(Post.id).filter_by(slug=slug_candidate).limit(1)):  # Added .limit(1) for efficiency
+                sa.select(Post.id).filter_by(slug=slug_candidate).limit(1)):
             slug_candidate = f"{base_slug}-{counter}"
             counter += 1
         return slug_candidate
