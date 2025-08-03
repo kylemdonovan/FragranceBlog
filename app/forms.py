@@ -119,3 +119,14 @@ class ChangeUsernameForm(FlaskForm):
         if user is not None:
             raise ValidationError(
                 'That username is already taken. Please choose a different one.')
+
+# === NEWSLETTER SUBSCRIPTION FORM ===
+class SubscriptionForm(FlaskForm):
+    email = StringField('Email Address', validators=[DataRequired(), Email()])
+    submit = SubmitField('Subscribe')
+
+    def validate_email(self, email):
+        # Check if the email is already subscribed
+        subscriber = db.session.scalar(db.select(Subscriber).where(Subscriber.email == email.data.lower()))
+        if subscriber is not None:
+            raise ValidationError('This email address is already subscribed.')

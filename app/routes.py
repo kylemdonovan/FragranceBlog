@@ -34,7 +34,9 @@ from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
 
-
+# --- More Imports but I am weary of labels ---
+from app.forms import (SubscriptionForm)
+from app.models import User, Post, Comment, Tag, Subscriber
 
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
@@ -303,6 +305,39 @@ Reply directly to {sender_email}.
         return redirect(url_for('main.contact'))
 
     return render_template('contact.html', title='Contact Us', form=form)
+
+
+# === NEWSLETTER SUBSCRIBE ROUTE ===
+@bp.route('/subscribe', methods=['POST'])
+def subscribe():
+    """Handles newsletter subscription form submission."""
+    form = SubscriptionForm()
+    if form.validate_on_submit():
+        email = form.email.data.lower()
+        subscriber = Subscriber(email=email)
+        try:
+            db.session.add(subscriber)
+            db.session.commit()
+            flash('Thank you for subscribing!', 'success')
+            current_app.logger.info(f"New newsletter subscriber: {email}")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error adding subscriber {email}: {e}", exc_info=True)
+            # Check if it's a unique constraint violation (already subscribed)
+            if 'UNIQUE constraint failed' in str(e):
+                flash('This email address is already subscribed.', 'info')
+            else:
+                flash('An error occurred. Please try again.', 'danger')
+    else:
+        # Handle validation errors by flashing them
+        if form.email.errors:
+            for error in form.email.errors:
+                flash(error, 'danger')
+
+    # Redirect back to the page the user was on, or to the homepage as a fallback
+    return redirect(request.referrer or url_for('main.index'))
+
+
 # === Authentication Routes ===
 
 @bp.route('/login', methods=['GET', 'POST'])

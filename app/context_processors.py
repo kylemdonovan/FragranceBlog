@@ -1,9 +1,12 @@
 # app/context_processors.py
-from app.models import Post, Tag
+from app.models import Post, Tag, Subscriber
+from app.forms import SubscriptionForm
 from app import db
 import sqlalchemy as sa
 from flask import current_app  # To access app config for number of items
 from datetime import datetime
+
+
 
 def inject_sidebar_data():
     """
@@ -11,7 +14,7 @@ def inject_sidebar_data():
     This includes recent posts and popular tags.
     """
     # --- Recent Posts ---
-    # Get the number of recent posts from config, default to 5 for now
+    # Get the number of recent posts from config, default to 5 for now but change later maybe
     num_recent_posts = current_app.config.get('SIDEBAR_RECENT_POSTS_COUNT', 5)
     try:
         recent_posts = db.session.scalars(
