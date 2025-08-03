@@ -213,6 +213,23 @@
 
     <footer class="container mt-5 py-3 border-top text-center text-muted">
         <p>© {{ now().year }} {{ config.get('BLOG_NAME', 'Fragrance Blog') }}. All Rights Reserved.</p>
+        {# --- START: NEWSLETTER SIGNUP FORM --- #}
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-6">
+                <h5>Subscribe to The Last Drop</h5>
+                <p class="text-muted">Get the latest reviews and articles delivered to your inbox.</p>
+                <form action="{{ url_for('main.subscribe') }}" method="POST" class="d-flex" novalidate>
+                    {{ subscription_form.hidden_tag() }} {# CSRF token #}
+                    <div class="form-floating flex-grow-1">
+                        {{ subscription_form.email(class="form-control", placeholder="Your Email Address") }}
+                        {{ subscription_form.email.label }}
+                    </div>
+                    {{ subscription_form.submit(class="btn btn-primary ms-2") }}
+                </form>
+            </div>
+        </div>
+    {# --- END: NEWSLETTER SIGNUP FORM --- #}
+
         {# Add Privacy Policy link here too if you have one #}
         {# <p><a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a></p> #}
     </footer>
