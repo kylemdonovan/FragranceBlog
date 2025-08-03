@@ -6,26 +6,33 @@ from dotenv import load_dotenv
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 load_dotenv(os.path.join(basedir, '.env'))
 
+# --- START: HELPER FUNCTION TO FIX THE ERROR ---
+def get_database_uri():
+    """Determines the database URI, prioritizing DATABASE_URL and falling back to SQLite."""
+    uri = os.environ.get('DATABASE_URL')
+    if uri and uri.startswith("postgres://"):
+        # Correct the prefix for SQLAlchemy compatibility with Render/Heroku
+        return uri.replace("postgres://", "postgresql://", 1)
+    elif uri:
+        # If DATABASE_URL is set for something else (e.g., mysql), just use it
+        return uri
+    else:
+        # Fallback to SQLite for local development
+        # 'basedir' is now defined as the project root, so this path is simple and correct.
+        instance_folder = os.path.join(basedir, 'instance')
+        os.makedirs(instance_folder, exist_ok=True)
+        db_path = os.path.join(instance_folder, 'app.db')
+        return 'sqlite:///' + db_path
+# --- END: HELPER FUNCTION ---
+
+
 class Config:
     # SECRET_KEY is crucial for session security and CSRF protection
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-should-really-change-this'
 
-    # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
-    elif not SQLALCHEMY_DATABASE_URI:
-        PROJECT_ROOT = os.path.dirname(basedir)  # This should resolve to my local copy that nobody needs to know
-        INSTANCE_FOLDER = os.path.join(PROJECT_ROOT, 'instance')
-
-        # Ensure the instance folder exists
-        os.makedirs(INSTANCE_FOLDER, exist_ok=True)
-
-        # Define the absolute path to the database file
-        DB_PATH = os.path.join(INSTANCE_FOLDER, 'app.db')
-
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + DB_PATH
-
+    # --- Database configuration ---
+    # MODIFIED: Call the helper function to get the correct URI, removing the complex if/elif block
+    SQLALCHEMY_DATABASE_URI = get_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Disable modification tracking (saves resources)
 
 
