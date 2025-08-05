@@ -2,29 +2,27 @@
 import os
 from dotenv import load_dotenv
 
-# This is the correct way to define the base directory of the project.
-# It assumes config.py is in the project's root folder.
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
-
 class Config:
-    # SECRET_KEY is crucial for session security and CSRF protection
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-super-secret-key-that-you-should-change'
+    # --- CORE SETTINGS ---
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-should-really-change-this'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # --- Database configuration ---
-    # This logic is now simpler and more explicit.
-    # 1. Use DATABASE_URL from the environment if it's set (for Render).
-    # 2. Otherwise, create a local sqlite database file named 'app.db' in an 'instance' folder.
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
-    elif not SQLALCHEMY_DATABASE_URI:
+    if 'DATABASE_URL' in os.environ:
+        # We are in production (e.g., on Render)
+        uri = os.environ.get('DATABASE_URL')
+        if uri.startswith("postgres://"):
+            uri = uri.replace("postgres://", "postgresql://", 1)
+        SQLALCHEMY_DATABASE_URI = uri
+    else:
+        # We are not in production (e.g., local)
         instance_folder = os.path.join(basedir, 'instance')
         os.makedirs(instance_folder, exist_ok=True) # Ensure the instance folder exists
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_folder, 'app.db')
-
-    SQLALCHEMY_TRACK_MODIFICATIONS = False # Disable modification tracking (saves resources)
+        db_path = os.path.join(instance_folder, 'app.db')
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + db_path
 
     # --- TINYMCE CONFIG ---
     TINYMCE_API_KEY = os.environ.get('TINYMCE_API_KEY')
@@ -53,7 +51,7 @@ class Config:
     REMEMBER_COOKIE_SAMESITE = 'Lax'
 
     # --- APP SPECIFIC SETTINGS ---
-    BLOG_NAME = os.environ.get('BLOG_NAME', 'My Temporarily Named Fragrance Blog')
+    BLOG_NAME = os.environ.get('BLOG_NAME', 'My Fragrance Blog')
     SIDEBAR_RECENT_POSTS_COUNT = 5
     SIDEBAR_POPULAR_TAGS_COUNT = 10
     SIGNUP_RATE_LIMIT = "5 per hour;20 per day"
