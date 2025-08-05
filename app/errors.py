@@ -1,5 +1,5 @@
 from flask import render_template, Blueprint, current_app, request
-from app import db  # Import db if you need to rollback sessions on 500 errors
+from app import db  # For potential error 500 rollback ability
 
 # Create a Blueprint for error handlers
 # This name 'errors' is just for organization within this file;
@@ -7,7 +7,7 @@ from app import db  # Import db if you need to rollback sessions on 500 errors
 bp = Blueprint('errors', __name__)
 
 
-@bp.app_errorhandler(404)  # Registers this function to handle all 404 errors for the app
+@bp.app_errorhandler(404)
 def not_found_error(error):
     # Log the 404 error with the path that was not found
     current_app.logger.warning(
@@ -17,8 +17,7 @@ def not_found_error(error):
 
 @bp.app_errorhandler(500)  # Registers this function to handle all 500 errors for the app
 def internal_error(error):
-    # It's good practice to rollback the database session in case the error
-    # was caused by a failed database operation that left the session in an inconsistent state.
+
     try:
         db.session.rollback()
         current_app.logger.info("Session rolled back successfully due to 500 error.")

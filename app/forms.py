@@ -5,7 +5,7 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextA
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 from app.models import User
 import sqlalchemy as sa
-
+from app import db
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])

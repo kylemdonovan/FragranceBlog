@@ -25,9 +25,9 @@ limiter = Limiter(
 )
 
 # LoginManager configuration
-login.login_view = 'main.login'  # The route function name for the login page
+login.login_view = 'main.login'
 login.login_message = 'Please log in to access this page.'
-login.login_message_category = 'info'  # Bootstrap class for flash message
+login.login_message_category = 'info'
 
 
 def create_app(config_class=Config):
@@ -37,7 +37,7 @@ def create_app(config_class=Config):
     instance_folder_path = os.path.join(app.root_path, '..', 'instance')
     try:
         os.makedirs(instance_folder_path, exist_ok=True)
-        app.instance_path = instance_folder_path  # Explicitly set instance path
+        app.instance_path = instance_folder_path
         # app.logger.info(f"Instance path explicitly set to: {app.instance_path}")
     except OSError as e:
         app.logger.error(f"Error creating instance folder at {instance_folder_path}: {e}", exc_info=True)
@@ -78,9 +78,7 @@ def create_app(config_class=Config):
 #    app.register_blueprint(errors_bp)
     # --- END error handling blueprint ---
 
-    # Import models here to ensure they are known to Flask-Migrate
-    # and available for shell context.
-    from app import models  # This is good.
+    from app import models
 
     from app.context_processors import inject_sidebar_data
     app.context_processor(inject_sidebar_data)
@@ -95,7 +93,7 @@ def create_app(config_class=Config):
             'Post': models.Post,
             'Comment': models.Comment,
             'Tag': models.Tag  # Added Tag model
-            # Add other models here if you create more
+
         }
 
     # --- Jinja Global Filters (Example for striptags, truncate for RSS) ---
@@ -103,7 +101,7 @@ def create_app(config_class=Config):
     from markupsafe import Markup
 
     @app.template_filter()
-    def striptags_filter(value):  # Renamed to avoid potential conflict with Jinja's internal striptags
+    def striptags_filter(value):
         if value is None: return ''
         return Markup(re.sub(r'<[^>]+>', '', str(value)))
 
@@ -113,7 +111,7 @@ def create_app(config_class=Config):
         value_str = str(value)
         if len(value_str) <= length:
             return value_str
-        return Markup(value_str[:length - len(end)] + end)  # Markup if we expect HTML output
+        return Markup(value_str[:length - len(end)] + end)
 
     # --- END Jinja filters ---
 
