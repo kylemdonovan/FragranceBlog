@@ -7,27 +7,14 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    {# --- Font Awesome (Optional, if you use icons like in the sidebar example) --- #}
-    {# <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" /> #}
 
     {# --- CSS OVERWRITE BOOTSTRAP --- #}
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    {# ---------------------------------------------- #}
 
-    {# --- START: FAVICON LINKS --- #}
-    {# Basic .ico for older browsers #}
+    {# --- FAVICON LINKS --- #}
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-    {# PNG versions for modern browsers - choose sizes you have #}
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
-    {# Optional: Apple touch icon for iOS home screens #}
-    {# <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}"> #}
-    {# Optional: For Android Chrome #}
-    {# <link rel="icon" type="image/png" sizes="192x192"  href="{{ url_for('static', filename='android-chrome-192x192.png') }}"> #}
-    {# Optional: Manifest file if your generator provided one and you want PWA-like features #}
-    {# <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}"> #}
-    {# --- END: FAVICON LINKS --- #}
-
 
     {% if title %}
         <title>{{ title }} - {{ config.get('BLOG_NAME', 'Fragrance Blog') }}</title>
@@ -37,15 +24,15 @@
 
     {# --- RSS Feed Link --- #}
     <link rel="alternate" type="application/rss+xml" title="{{ config.get('BLOG_NAME', 'Fragrance Blog') }} RSS Feed" href="{{ url_for('main.rss_feed', _external=True) }}">
-    {# ------------------------- #}
-    <!-- Inside the <head> of base.html, before your own style.css -->
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm fixed-top"> {# Added shadow and fixed-top for better look #}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm fixed-top">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">{{ config.get('BLOG_NAME', 'Fragrance Blog') }}</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,31 +40,21 @@
             </button>
              <div class="collapse navbar-collapse" id="navbarNav">
 
-                {# --- START: Left side navigation items --- #}
+                {# --- Left side navigation items --- #}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="{{ url_for('main.index') }}">Home</a>
-                    </li>
+                    {# --- FIX: REMOVED REDUNDANT HOME LINK --- #}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
                     </li>
-                    <!-- Add other desired public nav items here as <li> elements -->
-                    {# Example: About Page Link #}
-                    {# <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="{{ url_for('main.about') }}">About</a>
-                    </li> #}
                 </ul>
-                {# --- END: Left side navigation items --- #}
 
-
-                {# --- START: Search Form (Moved before right-side auth links for better flow on smaller screens) --- #}
+                {# --- Search Form --- #}
                 <form class="d-flex my-2 my-lg-0 me-lg-3" method="GET" action="{{ url_for('main.search') }}" role="search">
                   <input class="form-control me-2" type="search" placeholder="Search Posts" aria-label="Search" name="q" value="{{ request.args.get('q', '') }}">
                   <button class="btn btn-outline-light" type="submit">Search</button>
                 </form>
-                {# --- END: Search Form --- #}
 
-                {# --- START: Right side navigation items --- #}
+                {# --- Right side navigation items --- #}
                 <ul class="navbar-nav">
                      {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
@@ -89,10 +66,8 @@
                                   <li><a class="dropdown-item" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.create_post') }}">New Post</a></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.register') }}">Register User</a></li>
-                                  {# --- START: ADDED LINK --- #}
                                   <li><hr class="dropdown-divider"></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.admin_account') }}">My Account</a></li>
-                                  {# --- END: ADDED LINK --- #}
                                 </ul>
                               </li>
                         {% endif %}
@@ -101,12 +76,7 @@
                                 Hi, {{ current_user.username }}!
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
-                                {# --- START: ADDED LINK (for all logged-in users, even non-admins) --- #}
-                                {# If you only want admins to see this, move it inside the "if current_user.is_admin" block #}
-                                {% if current_user.is_admin %}
-                                <li><a class="dropdown-item" href="{{ url_for('main.admin_account') }}">My Account</a></li>
-                                {% endif %}
-                                {# --- END: ADDED LINK --- #}
+                                {# No need for a separate "My Account" link here unless non-admins get an account page #}
                                 <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
                             </ul>
                         </li>
@@ -114,20 +84,24 @@
                          <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Login</a>
                         </li>
-                         {# Public registration #}
                          <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'main.signup' %}active{% endif %}" href="{{ url_for('main.signup') }}">Sign Up</a>
                          </li>
-
                     {% endif %}
-                </ul>
-                {# --- END: Right side navigation items --- #}
 
-            </div> {# --- This closes the main div#navbarNav --- #}
+                    {# --- FIX: ADDED DARK MODE TOGGLER BUTTON --- #}
+                    <li class="nav-item ms-2">
+                        <button class="btn btn-outline-light" id="theme-toggler" type="button" aria-label="Toggle theme">
+                            🌙
+                        </button>
+                    </li>
+                </ul>
+
+            </div>
         </div>
     </nav>
 
-    <main role="main" class="container" style="padding-top: 70px;"> {# Added padding-top because navbar is fixed-top #}
+    <main role="main" class="container" style="padding-top: 70px;">
         <div class="row">
             <div class="col-md-8">
                 {# Flash messages #}
@@ -146,9 +120,8 @@
                 {% block content %}{% endblock %}
             </div>
 
-            {# --- START: DYNAMIC SIDEBAR --- #}
+            {# --- DYNAMIC SIDEBAR --- #}
             <div class="col-md-4">
-                {# --- Recent Posts Section --- #}
                 <div class="card mb-4 shadow-sm">
                     <div class="card-header bg-light">
                         <h4 class="mb-0">Recent Posts</h4>
@@ -170,7 +143,6 @@
                     </div>
                 </div>
 
-                {# --- Popular Tags Section --- #}
                 <div class="card mb-4 shadow-sm">
                     <div class="card-header bg-light">
                         <h4 class="mb-0">Popular Tags</h4>
@@ -186,7 +158,6 @@
                     </div>
                 </div>
 
-                {# --- Static About/Other Section --- #}
                 <div class="card shadow-sm">
                      <div class="card-header bg-light">
                         <h4 class="mb-0">About This Blog</h4>
@@ -203,44 +174,37 @@
                                 Subscribe to RSS Feed
                             </a>
                         </p>
-                        <p class="mt-2">
-                             {# Placeholder for Privacy Policy Link #}
-                             {# <a href="{{ url_for('main.privacy_policy') }}" class="text-decoration-none">Privacy Policy</a> #}
-                        </p>
                     </div>
                 </div>
             </div>
-            {# --- END: DYNAMIC SIDEBAR --- #}
         </div>
     </main>
 
     <footer class="container mt-5 py-3 border-top text-center text-muted">
         <p>© {{ now().year }} {{ config.get('BLOG_NAME', 'Fragrance Blog') }}. All Rights Reserved.</p>
-        {# --- START: NEWSLETTER SIGNUP FORM --- #}
         <div class="row justify-content-center mb-4">
             <div class="col-md-6">
                 <h5>Subscribe to The Last Drop</h5>
                 <p class="text-muted">Get the latest reviews and articles delivered to your inbox.</p>
+                {# This form is passed globally but not defined on every page, so check for it #}
+                {% if subscription_form %}
                 <form action="{{ url_for('main.subscribe') }}" method="POST" class="d-flex" novalidate>
-                    {{ subscription_form.hidden_tag() }} {# CSRF token #}
+                    {{ subscription_form.hidden_tag() }}
                     <div class="form-floating flex-grow-1">
                         {{ subscription_form.email(class="form-control", placeholder="Your Email Address") }}
                         {{ subscription_form.email.label }}
                     </div>
                     {{ subscription_form.submit(class="btn btn-primary ms-2") }}
                 </form>
+                {% endif %}
             </div>
         </div>
-    {# --- END: NEWSLETTER SIGNUP FORM --- #}
-
-        {# Add Privacy Policy link here LATER #}
-        {# <p><a href="{{ url_for('main.privacy_policy') }}">Privacy Policy</a></p> #}
     </footer>
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    {# Custom JS file if needed #}
-        <!-- START: DARK MODE TOGGLER SCRIPT -->
+
+    <!-- DARK MODE TOGGLER SCRIPT -->
     <script>
       (() => {
         'use strict'
@@ -253,65 +217,39 @@
           if (storedTheme) {
             return storedTheme
           }
-
           return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
         }
 
         const setTheme = theme => {
-          if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.setAttribute('data-bs-theme', 'dark')
-          } else {
-            document.documentElement.setAttribute('data-bs-theme', theme)
+          document.documentElement.setAttribute('data-bs-theme', theme)
+          // Update the button icon based on the theme
+          const themeToggler = document.querySelector('#theme-toggler');
+          if (themeToggler) {
+              themeToggler.innerHTML = theme === 'dark' ? '☀️' : '🌙';
           }
         }
-
-        setTheme(getPreferredTheme())
-
-        const showActiveTheme = theme => {
-          const themeSwitcher = document.querySelector('#theme-toggler')
-
-          if (!themeSwitcher) {
-            return
-          }
-
-          // ADD NEREVAR MOON AND *sun* icons here later to show sun/moon
-          // For now, it just toggles.
-        }
-
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-          if (getStoredTheme() !== 'light' && getStoredTheme() !== 'dark') {
-            setTheme(getPreferredTheme())
-          }
-        })
 
         window.addEventListener('DOMContentLoaded', () => {
-          showActiveTheme(getPreferredTheme())
+          const currentTheme = getPreferredTheme();
+          setTheme(currentTheme);
 
-          document.querySelectorAll('[data-bs-theme-value]')
-            .forEach(toggle => {
-              toggle.addEventListener('click', () => {
-                const theme = toggle.getAttribute('data-bs-theme-value')
-                setStoredTheme(theme)
-                setTheme(theme)
-                showActiveTheme(theme)
-              })
-            })
-
-          // Custom toggler button logic
           const themeToggler = document.querySelector('#theme-toggler');
           if (themeToggler) {
               themeToggler.addEventListener('click', () => {
-                  const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                  const currentTheme = getStoredTheme() || getPreferredTheme();
                   const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
                   setStoredTheme(newTheme);
                   setTheme(newTheme);
-                  showActiveTheme(newTheme);
               });
+          }
+        })
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+          if (!getStoredTheme()) {
+            setTheme(getPreferredTheme())
           }
         })
       })()
     </script>
-    <!-- END: DARK MODE TOGGLER SCRIPT -->
-
 </body>
 </html>

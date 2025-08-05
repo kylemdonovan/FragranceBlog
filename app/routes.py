@@ -9,11 +9,12 @@ from flask_mail import Message
 from app import mail, limiter
 
 from feedgen.feed import FeedGenerator
-from flask import Response, url_for, send_from_directory  # Added send_from_directory for robots.txt
-from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ContactForm, RequestPasswordResetForm,
-                       ResetPasswordForm, ChangePasswordForm)  # Ensured ResetPasswordForm is here
-
-
+from flask import Response, url_for, send_from_directory
+# CORRECTED: Ensured ChangePasswordForm is imported, not the non-existent AdminChangePasswordForm
+from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm,
+                       ContactForm, RequestPasswordResetForm,
+                       ResetPasswordForm, ChangePasswordForm, EditCommentForm,
+                       SubscriptionForm)
 
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
@@ -23,20 +24,16 @@ import sqlalchemy as sa
 from urllib.parse import urlsplit
 from functools import wraps
 import os
-import re  # no gg
+import re
 
 # --- App Specific Imports ---
 from app import db
-from app.models import User, Post, Comment, Tag
+from app.models import User, Post, Comment, Tag, Subscriber
 
 # --- Image Handling Imports ---
 from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
-
-# --- More Imports but I am weary of labels ---
-from app.forms import (SubscriptionForm)
-from app.models import User, Post, Comment, Tag, Subscriber
 
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
@@ -68,13 +65,15 @@ def upload_to_cloudinary(file_to_upload):
     if not file_to_upload:
         return None, None
     if not current_app.config.get('CLOUDINARY_CLOUD_NAME'):
-        current_app.logger.warning("Upload Helper: Cloudinary not configured in Flask app.")
+        current_app.logger.warning(
+            "Upload Helper: Cloudinary not configured in Flask app.")
         flash("Image upload service is not configured.", "warning")
         return None, None
 
     filename = secure_filename(file_to_upload.filename)
     if not filename:
-        current_app.logger.warning("Upload Helper: Invalid filename after sanitizing.")
+        current_app.logger.warning(
+            "Upload Helper: Invalid filename after sanitizing.")
         flash("Invalid image filename.", "warning")
         return None, None
 
@@ -90,15 +89,20 @@ def upload_to_cloudinary(file_to_upload):
         public_id = upload_result.get('public_id')
 
         if secure_url and public_id:
-            current_app.logger.info(f"Upload Helper: Success! URL: {secure_url}, Public ID: {public_id}")
+            current_app.logger.info(
+                f"Upload Helper: Success! URL: {secure_url}, Public ID: {public_id}")
             return secure_url, public_id
         else:
-            current_app.logger.error(f"Upload Helper: Failed - No secure_url or public_id. Result: {upload_result}")
+            current_app.logger.error(
+                f"Upload Helper: Failed - No secure_url or public_id. Result: {upload_result}")
             flash("Image upload failed to return a valid URL or ID.", "danger")
             return None, None
     except Exception as e:
-        current_app.logger.error(f"Upload Helper: Cloudinary upload FAILED with exception: {e}", exc_info=True)
-        flash(f"Image upload encountered an error. Please try again later.", "danger")
+        current_app.logger.error(
+            f"Upload Helper: Cloudinary upload FAILED with exception: {e}",
+            exc_info=True)
+        flash(f"Image upload encountered an error. Please try again later.",
+              "danger")
         return None, None
 
 
@@ -130,7 +134,6 @@ def health_check():
     return "OK", 200
 
 
-
 # === Public Routes ===
 
 @bp.route('/')
@@ -138,16 +141,20 @@ def health_check():
 def index():
     """Displays the homepage with paginated posts."""
     page = request.args.get('page', 1, type=int)
-    per_page = current_app.config.get('POSTS_PER_PAGE', 5)  # Example: Make posts per page configurable
+    per_page = current_app.config.get('POSTS_PER_PAGE', 5)
     query = sa.select(Post).order_by(Post.timestamp.desc())
-    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    pagination = db.paginate(query, page=page, per_page=per_page,
+                             error_out=False)
     posts = pagination.items
 
-    next_url = url_for('main.index', page=pagination.next_num) if pagination.has_next else None
-    prev_url = url_for('main.index', page=pagination.prev_num) if pagination.has_prev else None
+    next_url = url_for('main.index',
+                       page=pagination.next_num) if pagination.has_next else None
+    prev_url = url_for('main.index',
+                       page=pagination.prev_num) if pagination.has_prev else None
 
     return render_template('index.html', title='Home', posts=posts,
-                           next_url=next_url, prev_url=prev_url, pagination=pagination)
+                           next_url=next_url, prev_url=prev_url,
+                           pagination=pagination)
 
 
 @bp.route('/post/<string:slug>', methods=['GET', 'POST'])
@@ -157,66 +164,74 @@ def post(slug):
 
     if post_obj is None:
         flash(f'Post "{slug}" not found.', 'warning')
-        current_app.logger.warning(f"Attempt to access non-existent post with slug: {slug}")
+        current_app.logger.warning(
+            f"Attempt to access non-existent post with slug: {slug}")
         return redirect(url_for('main.index'))
 
     form = CommentForm()
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash('You must be logged in to comment.', 'warning')
-            return redirect(url_for('main.login', next=url_for('main.post', slug=post_obj.slug)))
+            return redirect(url_for('main.login', next=url_for('main.post',
+                                                               slug=post_obj.slug)))
 
-        comment = Comment(body=form.body.data, commenter=current_user, post=post_obj)
+        comment = Comment(body=form.body.data, commenter=current_user,
+                          post=post_obj)
         db.session.add(comment)
         try:
             db.session.commit()
             flash('Your comment has been published.', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'Error saving comment. Please try again.', 'danger')  # Simplified user message
-            current_app.logger.error(f"DB Error saving comment for post {post_obj.id} (slug: {slug}): {e}",
-                                     exc_info=True)
+            flash(f'Error saving comment. Please try again.', 'danger')
+            current_app.logger.error(
+                f"DB Error saving comment for post {post_obj.id} (slug: {slug}): {e}",
+                exc_info=True)
         return redirect(url_for('main.post', slug=post_obj.slug))
 
     page = request.args.get('page', 1, type=int)
     per_page_comments = current_app.config.get('COMMENTS_PER_PAGE', 10)
-    comments_query = sa.select(Comment).where(Comment.post_id == post_obj.id).order_by(Comment.timestamp.desc())
-    pagination_comments = db.paginate(comments_query, page=page, per_page=per_page_comments, error_out=False)
+    comments_query = sa.select(Comment).where(
+        Comment.post_id == post_obj.id).order_by(Comment.timestamp.desc())
+    pagination_comments = db.paginate(comments_query, page=page,
+                                      per_page=per_page_comments,
+                                      error_out=False)
     comments = pagination_comments.items
 
+    # These variable names were conflicting with the main post pagination, renamed for clarity
     next_url_comments = url_for('main.post', slug=slug,
                                 page=pagination_comments.next_num) if pagination_comments.has_next else None
     prev_url_comments = url_for('main.post', slug=slug,
                                 page=pagination_comments.prev_num) if pagination_comments.has_prev else None
 
-    return render_template('post.html', title=post_obj.title, post=post_obj, form=form,
-                           comments=comments, next_url_comments=next_url_comments, prev_url_comments=prev_url_comments,
-                           pagination_comments=pagination_comments)
+    # Passing the pagination objects to the template for more flexible rendering
+    return render_template('post.html', title=post_obj.title, post=post_obj,
+                           form=form,
+                           comments=comments, next_url=next_url_comments,
+                           prev_url=prev_url_comments,
+                           pagination=pagination_comments)
 
 
 # === Public User Registration Route ===
 @bp.route('/signup', methods=['GET', 'POST'])
 @limiter.limit(lambda: current_app.config.get('SIGNUP_RATE_LIMIT',
-                                              "5 per hour;20 per day"))  # Good to rate limit signups
+                                              "5 per hour;20 per day"))
 def signup():
     """Handles public user registration."""
     if current_user.is_authenticated:
-        # If user is already logged in, just send them to the homepage.
         return redirect(url_for('main.index'))
 
-    form = RegistrationForm()  # We can reuse the same RegistrationForm
+    form = RegistrationForm()
     if form.validate_on_submit():
-        # Create a new user but explicitly set is_admin to False for security
         user = User(
             username=form.username.data,
             email=form.email.data,
-            is_admin=False  # <<< CRITICAL: Public signups are NEVER admins.
+            is_admin=False  # CRITICAL: Public signups are NEVER admins.
         )
         user.set_password(form.password.data)
         db.session.add(user)
         try:
             db.session.commit()
-            # Log them in automatically after they sign up
             login_user(user)
             flash('Congratulations, your account has been created!', 'success')
             return redirect(url_for('main.index'))
@@ -232,7 +247,6 @@ def signup():
     return render_template('signup.html', title='Sign Up', form=form)
 
 
-# In app/routes.py
 @bp.route('/contact', methods=['GET', 'POST'])
 def contact():
     """Displays contact form and handles submission by sending an email."""
@@ -243,50 +257,36 @@ def contact():
         subject_from_form = form.subject.data
         message_body = form.message.data
 
-        # --- Get all the required config values first ---
         admin_email_recipient = current_app.config.get('ADMIN_EMAIL')
-        mail_username = current_app.config.get('MAIL_USERNAME')
         mail_default_sender = current_app.config.get('MAIL_DEFAULT_SENDER')
-        default_sender = mail_default_sender or mail_username  # The fallback logic
         mail_server = current_app.config.get('MAIL_SERVER')
 
-        # --- START: SCREAMING DEBUG BLOCK ---
-        if not admin_email_recipient or not default_sender or not mail_server:
-            # Create a very detailed debug message
-            debug_message = (
-                f"DEBUG: Config Check Failed! "
-                f"ADMIN_EMAIL='{admin_email_recipient}', "
-                f"MAIL_USERNAME='{mail_username}', "
-                f"MAIL_DEFAULT_SENDER='{mail_default_sender}', "
-                f"FINAL default_sender='{default_sender}', "
-                f"MAIL_SERVER='{mail_server}'"
-            )
-            current_app.logger.error(debug_message)
-            flash(debug_message,
-                  'danger')  # Flash the debug message to the screen
+        if not all([admin_email_recipient, mail_default_sender, mail_server]):
+            current_app.logger.error(
+                "Mail configuration is incomplete. Cannot send contact email.")
+            flash(
+                "The mail service is not configured correctly. Please contact the administrator directly.",
+                'danger')
             return redirect(url_for('main.contact'))
 
-        # --- END: SCREAMING DEBUG BLOCK ---
-
-        # If the check passes, the code continues here
         msg = Message(
             subject=f"[{current_app.config.get('BLOG_NAME', 'Fragrance Blog')} Contact] {subject_from_form}",
-            sender=default_sender,
+            sender=mail_default_sender,
             recipients=[admin_email_recipient],
             reply_to=sender_email
         )
         msg.body = f"""
-You have received a new message from your blog contact form:
+        You have received a new message from your blog contact form:
 
-Name: {name}
-Email: {sender_email}
-Subject: {subject_from_form}
+        Name: {name}
+        Email: {sender_email}
+        Subject: {subject_from_form}
 
-Message:
-{message_body}
----
-Reply directly to {sender_email}.
-"""
+        Message:
+        {message_body}
+        ---
+        Reply directly to {sender_email}.
+        """
         try:
             mail.send(msg)
             current_app.logger.info(
@@ -299,7 +299,7 @@ Reply directly to {sender_email}.
                 f"Failed to send contact form email from {sender_email}: {e}",
                 exc_info=True)
             flash(
-                "Sorry, we couldn't send your message at this time due to a server error. Please check the logs.",
+                "Sorry, we couldn't send your message at this time due to a server error.",
                 'danger')
 
         return redirect(url_for('main.contact'))
@@ -322,34 +322,32 @@ def subscribe():
             current_app.logger.info(f"New newsletter subscriber: {email}")
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error adding subscriber {email}: {e}", exc_info=True)
-            # Check if it's a unique constraint violation (already subscribed)
+            current_app.logger.error(f"Error adding subscriber {email}: {e}",
+                                     exc_info=True)
             if 'UNIQUE constraint failed' in str(e):
                 flash('This email address is already subscribed.', 'info')
             else:
                 flash('An error occurred. Please try again.', 'danger')
     else:
-        # Handle validation errors by flashing them
         if form.email.errors:
             for error in form.email.errors:
                 flash(error, 'danger')
 
-    # Redirect back to the page the user was on, or to the homepage as a fallback
     return redirect(request.referrer or url_for('main.index'))
 
 
 # === Authentication Routes ===
-
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit(lambda:
-current_app.config.get('LOGIN_RATE_LIMIT', "5 per minute;100 per day"))
+@limiter.limit(lambda: current_app.config.get('LOGIN_RATE_LIMIT',
+                                              "5 per minute;100 per day"))
 def login():
     """Handles user login."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = db.session.scalar(sa.select(User).where(User.username == form.username.data))
+        user = db.session.scalar(
+            sa.select(User).where(User.username == form.username.data))
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password.', 'danger')
             return redirect(url_for('main.login'))
@@ -373,13 +371,13 @@ def logout():
 
 
 # --- Password Reset Helper Function ---
-def send_password_reset_email_helper(user_obj):  # Renamed to avoid conflict if 'user' is used elsewhere
+def send_password_reset_email_helper(user_obj):
     """Generates reset token and sends password reset email."""
     token = user_obj.get_reset_password_token()
-
     msg = Message(
         subject=f"[{current_app.config.get('BLOG_NAME', 'Fragrance Blog')}] Password Reset Request",
-        sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME')),
+        sender=current_app.config.get('MAIL_DEFAULT_SENDER',
+                                      current_app.config.get('MAIL_USERNAME')),
         recipients=[user_obj.email]
     )
     msg.body = f"""Dear {user_obj.username},
@@ -393,40 +391,46 @@ This link will expire in {current_app.config.get('PASSWORD_RESET_EXPIRES_SEC', 1
 Sincerely,
 The Blog Team
 """
-    # msg.html = render_template('email/reset_password_email.html', user=user_obj, token=token) # For HTML email
-
     try:
         if current_app.config.get('MAIL_SERVER'):
             mail.send(msg)
-            current_app.logger.info(f"Password reset email successfully sent to {user_obj.email}")
+            current_app.logger.info(
+                f"Password reset email successfully sent to {user_obj.email}")
         else:
             current_app.logger.warning(
                 f"Mail server not configured. Password reset email for {user_obj.email} NOT sent.")
-            reset_url = url_for('main.reset_password', token=token, _external=True)
-            current_app.logger.info(f"DEV MODE: Password Reset Link for {user_obj.email}: {reset_url}")
-            # Flash message for dev mode is good for user feedback
-            flash("Mail server not configured. For development, check console for reset link.", "info")
-
+            reset_url = url_for('main.reset_password', token=token,
+                                _external=True)
+            current_app.logger.info(
+                f"DEV MODE: Password Reset Link for {user_obj.email}: {reset_url}")
+            flash(
+                "Mail server not configured. For development, check console for reset link.",
+                "info")
     except Exception as e:
-        current_app.logger.error(f"Failed to send password reset email to {user_obj.email}: {e}", exc_info=True)
-        # Avoid flashing specific error, as it might reveal system state. Log is sufficient.
-        flash('Sorry, we encountered an issue sending the password reset email. Please try again later.', 'danger')
+        current_app.logger.error(
+            f"Failed to send password reset email to {user_obj.email}: {e}",
+            exc_info=True)
+        flash(
+            'Sorry, we encountered an issue sending the password reset email. Please try again later.',
+            'danger')
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
-@limiter.limit(lambda: current_app.config.get('PASSWORD_RESET_RATE_LIMIT', "3 per hour;10 per day"))
+@limiter.limit(lambda: current_app.config.get('PASSWORD_RESET_RATE_LIMIT',
+                                              "3 per hour;10 per day"))
 def reset_password_request():
     """Handles request to reset password (sends email with token)."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RequestPasswordResetForm()
     if form.validate_on_submit():
-        user_obj = db.session.scalar(sa.select(User).filter_by(email=form.email.data))  # Renamed
+        user_obj = db.session.scalar(
+            sa.select(User).filter_by(email=form.email.data))
         if user_obj:
-            send_password_reset_email_helper(user_obj)  # Call the helper
-        # Always show the same message for security reasons
-        flash('If an account with that email address exists, instructions to reset your password have been sent.',
-              'info')
+            send_password_reset_email_helper(user_obj)
+        flash(
+            'If an account with that email address exists, instructions to reset your password have been sent.',
+            'info')
         return redirect(url_for('main.login'))
 
     return render_template('reset_password_request.html',
@@ -439,9 +443,10 @@ def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
-    user_obj = User.verify_reset_password_token(token)  # Renamed
+    user_obj = User.verify_reset_password_token(token)
     if not user_obj:
-        flash('That is an invalid or expired token. Please request a new one.', 'warning')
+        flash('That is an invalid or expired token. Please request a new one.',
+              'warning')
         return redirect(url_for('main.reset_password_request'))
 
     form = ResetPasswordForm()
@@ -449,18 +454,24 @@ def reset_password(token):
         user_obj.set_password(form.password.data)
         try:
             db.session.commit()
-            flash('Your password has been successfully reset! You can now log in.', 'success')
+            flash(
+                'Your password has been successfully reset! You can now log in.',
+                'success')
             return redirect(url_for('main.login'))
         except Exception as e:
             db.session.rollback()
-            flash(f'An error occurred while resetting your password. Please try again.', 'danger')
-            current_app.logger.error(f"DB Error resetting password for user {user_obj.id}: {e}", exc_info=True)
+            flash(
+                f'An error occurred while resetting your password. Please try again.',
+                'danger')
+            current_app.logger.error(
+                f"DB Error resetting password for user {user_obj.id}: {e}",
+                exc_info=True)
 
-    return render_template('reset_password.html', title='Reset Your Password', form=form)
+    return render_template('reset_password.html', title='Reset Your Password',
+                           form=form)
 
 
 # === User Management Routes (Admin Only) ===
-
 @bp.route('/admin/register', methods=['GET', 'POST'])
 @admin_required
 def register():
@@ -469,22 +480,25 @@ def register():
     if form.validate_on_submit():
         user = User(username=form.username.data, email=form.email.data)
         user.set_password(form.password.data)
-        user.is_admin = False  # Admins create non-admin users by default
+        user.is_admin = False
         db.session.add(user)
         try:
             db.session.commit()
             flash(f'User {user.username} created successfully!', 'success')
         except Exception as e:
             db.session.rollback()
-            flash(f'Error creating user {user.username}. Please check the logs.', 'danger')
-            current_app.logger.error(f"DB Error creating user {user.username}: {e}", exc_info=True)
+            flash(
+                f'Error creating user {user.username}. Please check the logs.',
+                'danger')
+            current_app.logger.error(
+                f"DB Error creating user {user.username}: {e}", exc_info=True)
         return redirect(url_for('main.admin_dashboard'))
 
-    return render_template('register.html', title='Register New User', form=form)
+    return render_template('register.html', title='Register New User',
+                           form=form)
 
 
 # === Admin Routes ===
-
 @bp.route('/admin')
 @admin_required
 def admin_dashboard():
@@ -492,36 +506,38 @@ def admin_dashboard():
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('ADMIN_POSTS_PER_PAGE', 10)
     query = sa.select(Post).order_by(Post.timestamp.desc())
-    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    pagination = db.paginate(query, page=page, per_page=per_page,
+                             error_out=False)
     posts = pagination.items
 
-    next_url = url_for('main.admin_dashboard', page=pagination.next_num) if pagination.has_next else None
-    prev_url = url_for('main.admin_dashboard', page=pagination.prev_num) if pagination.has_prev else None
+    next_url = url_for('main.admin_dashboard',
+                       page=pagination.next_num) if pagination.has_next else None
+    prev_url = url_for('main.admin_dashboard',
+                       page=pagination.prev_num) if pagination.has_prev else None
 
-    return render_template('admin/dashboard.html', title='Admin Dashboard', posts=posts,
-                           next_url=next_url, prev_url=prev_url, pagination=pagination)
+    return render_template('admin/dashboard.html', title='Admin Dashboard',
+                           posts=posts,
+                           next_url=next_url, prev_url=prev_url,
+                           pagination=pagination)
 
 
 @bp.route('/admin/post/new', methods=['GET', 'POST'])
 @admin_required
 def create_post():
-    """Handles creation of a new blog post, including tags and Cloudinary image public_id."""
+    """Handles creation of a new blog post."""
     form = PostForm()
     if form.validate_on_submit():
-        current_app.logger.info("CREATE POST: Form Validated")
-
         image_file = form.image.data
-        image_url = None
-        image_public_id = None
-
+        image_url, image_public_id = None, None
         if image_file:
-            current_app.logger.info("CREATE POST: Image file detected, attempting upload.")
             image_url, image_public_id = upload_to_cloudinary(image_file)
             if image_url is None:
-                flash("Image upload failed, post will be created without image.", "warning")
+                flash(
+                    "Image upload failed, post will be created without an image.",
+                    "warning")
 
         new_slug = Post.generate_unique_slug(form.title.data)
-        post_obj = Post(title=form.title.data,  # Renamed to post_obj
+        post_obj = Post(title=form.title.data,
                         body=form.body.data,
                         author=current_user,
                         slug=new_slug,
@@ -529,153 +545,114 @@ def create_post():
                         image_public_id=image_public_id)
 
         tag_string = form.tags.data
-        current_tags = set()
         if tag_string:
-            tag_names = [name.strip().lower() for name in tag_string.split(',') if name.strip()]
+            tag_names = [name.strip().lower() for name in tag_string.split(',')
+                         if name.strip()]
             for tag_name in tag_names:
-                if not tag_name: continue
-                tag_obj = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))  # Renamed
+                tag_obj = db.session.scalar(
+                    sa.select(Tag).filter_by(name=tag_name))
                 if tag_obj is None:
                     tag_obj = Tag(name=tag_name)
                     db.session.add(tag_obj)
-                    current_app.logger.info(f"CREATE POST: Adding new tag '{tag_name}'")
-                else:
-                    current_app.logger.info(f"CREATE POST: Found existing tag '{tag_name}'")
-                current_tags.add(tag_obj)
-        post_obj.tags = list(current_tags)
-        current_app.logger.info(f"CREATE POST: Final tags for post: {[t.name for t in post_obj.tags]}")
+                post_obj.tags.append(tag_obj)
 
         db.session.add(post_obj)
         try:
             db.session.commit()
-            current_app.logger.info(f"CREATE POST: DB Commit Successful for post '{post_obj.title}'")
             flash('Your post has been created!', 'success')
             return redirect(url_for('main.admin_dashboard'))
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"CREATE POST: DB Commit FAILED for post '{form.title.data}': {e}", exc_info=True)
-            flash(f'Database error prevented post creation. Please try again.', 'danger')
-
-    elif request.method == 'POST':
-        current_app.logger.warning(f"CREATE POST: Form Validation FAILED. Errors: {form.errors}")
+            current_app.logger.error(f"CREATE POST: DB Commit FAILED: {e}",
+                                     exc_info=True)
+            flash('Database error prevented post creation. Please try again.',
+                  'danger')
 
     return render_template('admin/create_edit_post.html',
                            title='Create New Post',
-                           form=form,
-                           legend='New Post',
-                           tinymce_api_key=current_app.config.get('TINYMCE_API_KEY'))
+                           form=form, legend='New Post',
+                           tinymce_api_key=current_app.config.get(
+                               'TINYMCE_API_KEY'))
 
 
 @bp.route('/admin/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_post(post_id):
-    """Handles editing of an existing blog post, including tags and Cloudinary image management."""
+    """Handles editing of an existing blog post."""
     post_to_edit = db.get_or_404(Post, post_id)
     form = PostForm()
-
     if form.validate_on_submit():
-        current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Form Validated")
-
         remove_image_checked = request.form.get('remove_image') == 'on'
         image_file = form.image.data
         old_public_id = post_to_edit.image_public_id
 
         if remove_image_checked:
-            current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Remove image checkbox checked.")
-            if old_public_id and current_app.config.get('CLOUDINARY_CLOUD_NAME'):
+            if old_public_id and current_app.config.get(
+                    'CLOUDINARY_CLOUD_NAME'):
                 try:
                     cloudinary.uploader.destroy(old_public_id)
-                    current_app.logger.info(
-                        f"EDIT POST ID {post_to_edit.id}: Successfully deleted old image (public_id: {old_public_id}) from Cloudinary.")
                 except Exception as e:
                     current_app.logger.error(
-                        f"EDIT POST ID {post_to_edit.id}: Failed to delete old Cloudinary image (public_id: {old_public_id}): {e}",
+                        f"Failed to delete old Cloudinary image {old_public_id}: {e}",
                         exc_info=True)
-                    flash("Failed to remove old image from storage.", "warning")
-            elif old_public_id:
-                current_app.logger.warning(
-                    f"EDIT POST ID {post_to_edit.id}: Cloudinary not configured, skipping deletion of old image (public_id: {old_public_id}).")
             post_to_edit.image_url = None
             post_to_edit.image_public_id = None
-            flash("Existing image has been removed from the post.", "info")  # More specific flash
         elif image_file:
-            current_app.logger.info(
-                f"EDIT POST ID {post_to_edit.id}: New image file '{secure_filename(image_file.filename)}' detected, attempting upload.")
             new_url, new_public_id = upload_to_cloudinary(image_file)
             if new_url and new_public_id:
-                if old_public_id and old_public_id != new_public_id and current_app.config.get('CLOUDINARY_CLOUD_NAME'):
+                if old_public_id and old_public_id != new_public_id and current_app.config.get(
+                        'CLOUDINARY_CLOUD_NAME'):
                     try:
                         cloudinary.uploader.destroy(old_public_id)
-                        current_app.logger.info(
-                            f"EDIT POST ID {post_to_edit.id}: Successfully deleted replaced image (public_id: {old_public_id}) from Cloudinary.")
                     except Exception as e:
                         current_app.logger.error(
-                            f"EDIT POST ID {post_to_edit.id}: Failed to delete replaced Cloudinary image (public_id: {old_public_id}): {e}",
+                            f"Failed to delete replaced Cloudinary image {old_public_id}: {e}",
                             exc_info=True)
-                        flash("Failed to remove previously uploaded image from storage.", "warning")
-                elif old_public_id and old_public_id != new_public_id:
-                    current_app.logger.warning(
-                        f"EDIT POST ID {post_to_edit.id}: Cloudinary not configured, skipping deletion of replaced image (public_id: {old_public_id}).")
                 post_to_edit.image_url = new_url
                 post_to_edit.image_public_id = new_public_id
-                current_app.logger.info(
-                    f"EDIT POST ID {post_to_edit.id}: Updating image URL to '{new_url}' and public_id to '{new_public_id}'")
             else:
-                flash("New image upload failed. Existing image (if any) was retained.", "warning")
+                flash("New image upload failed. Existing image was retained.",
+                      "warning")
+
+        post_to_edit.title = form.title.data
+        post_to_edit.body = form.body.data
+        if post_to_edit.is_modified('title'):
+            post_to_edit.slug = Post.generate_unique_slug(post_to_edit.title)
 
         post_to_edit.tags.clear()
         tag_string = form.tags.data
-        current_tags = set()
         if tag_string:
-            tag_names = [name.strip().lower() for name in tag_string.split(',') if name.strip()]
+            tag_names = [name.strip().lower() for name in tag_string.split(',')
+                         if name.strip()]
             for tag_name in tag_names:
-                if not tag_name: continue
-                tag_obj = db.session.scalar(sa.select(Tag).filter_by(name=tag_name))  # Renamed
+                tag_obj = db.session.scalar(
+                    sa.select(Tag).filter_by(name=tag_name))
                 if tag_obj is None:
                     tag_obj = Tag(name=tag_name)
                     db.session.add(tag_obj)
-                    current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Adding new tag '{tag_name}'")
-                else:
-                    current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Found existing tag '{tag_name}'")
-                current_tags.add(tag_obj)
-        post_to_edit.tags = list(current_tags)
-        current_app.logger.info(
-            f"EDIT POST ID {post_to_edit.id}: Final tags for post: {[t.name for t in post_to_edit.tags]}")
-
-        original_title = post_to_edit.title
-        post_to_edit.title = form.title.data
-        post_to_edit.body = form.body.data
-        if post_to_edit.title != original_title:  # Regenerate slug only if title changed
-            old_slug = post_to_edit.slug
-            post_to_edit.slug = Post.generate_unique_slug(post_to_edit.title)  # Ensure Post model has this method
-            current_app.logger.info(
-                f"EDIT POST ID {post_to_edit.id}: Slug regenerated from '{old_slug}' to '{post_to_edit.slug}'")
-
+                post_to_edit.tags.append(tag_obj)
         try:
             db.session.commit()
-            current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: DB Commit Successful")
             flash('Your post has been updated!', 'success')
             return redirect(url_for('main.post', slug=post_to_edit.slug))
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"EDIT POST: DB Commit FAILED for post ID {post_to_edit.id}: {e}", exc_info=True)
-            flash(f'Database error prevented post update. Please try again.', 'danger')
+            current_app.logger.error(
+                f"EDIT POST: DB Commit FAILED for post ID {post_to_edit.id}: {e}",
+                exc_info=True)
+            flash('Database error prevented post update. Please try again.',
+                  'danger')
 
-    elif request.method == 'POST':
-        current_app.logger.warning(f"EDIT POST ID {post_to_edit.id}: Form Validation FAILED. Errors: {form.errors}")
-
-    if request.method == 'GET':
+    elif request.method == 'GET':
         form.title.data = post_to_edit.title
         form.body.data = post_to_edit.body
         form.tags.data = ', '.join([tag.name for tag in post_to_edit.tags])
-        current_app.logger.info(f"EDIT POST ID {post_to_edit.id}: Populating form for GET request")
 
-    return render_template('admin/create_edit_post.html',
-                           title='Edit Post',
+    return render_template('admin/create_edit_post.html', title='Edit Post',
                            form=form,
                            legend='Edit Post',
-                           tinymce_api_key=current_app.config.get('TINYMCE_API_KEY'),
-                           post=post_to_edit)
+                           tinymce_api_key=current_app.config.get(
+                               'TINYMCE_API_KEY'), post=post_to_edit)
 
 
 @bp.route('/tag/<string:tag_name>')
@@ -688,55 +665,54 @@ def tag(tag_name):
 
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('TAG_POSTS_PER_PAGE', 5)
+    query = sa.select(Post).join(Post.tags).where(
+        Tag.id == tag_obj.id).order_by(Post.timestamp.desc())
+    pagination = db.paginate(query, page=page, per_page=per_page,
+                             error_out=False)
+    posts_on_page = pagination.items
 
-    # Using the relationship directly for pagination
-    query = tag_obj.posts.order_by(Post.timestamp.desc())  # This should be a query object
-    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
-    posts_on_page = pagination.items  # Renamed for clarity
-
-    next_url = url_for('main.tag', tag_name=tag_name, page=pagination.next_num) if pagination.has_next else None
-    prev_url = url_for('main.tag', tag_name=tag_name, page=pagination.prev_num) if pagination.has_prev else None
+    next_url = url_for('main.tag', tag_name=tag_name,
+                       page=pagination.next_num) if pagination.has_next else None
+    prev_url = url_for('main.tag', tag_name=tag_name,
+                       page=pagination.prev_num) if pagination.has_prev else None
 
     return render_template('tag_posts.html', tag=tag_obj, posts=posts_on_page,
                            title=f"Posts tagged '{tag_obj.name}'",
-                           next_url=next_url, prev_url=prev_url, pagination=pagination)
+                           next_url=next_url, prev_url=prev_url,
+                           pagination=pagination)
 
 
 @bp.route('/admin/post/<int:post_id>/delete', methods=['POST'])
 @admin_required
 def delete_post(post_id):
     """Handles deletion of a blog post and its Cloudinary image."""
-    if request.method == 'POST':  # Redundant due to methods=['POST'] but safe
-        post_to_delete = db.get_or_404(Post, post_id)
-        post_title = post_to_delete.title
-        image_public_id_to_delete = post_to_delete.image_public_id
+    post_to_delete = db.get_or_404(Post, post_id)
+    post_title = post_to_delete.title
+    image_public_id_to_delete = post_to_delete.image_public_id
 
-        try:
-            if image_public_id_to_delete and current_app.config.get('CLOUDINARY_CLOUD_NAME'):
-                try:
-                    cloudinary.uploader.destroy(image_public_id_to_delete)
-                    current_app.logger.info(
-                        f"DELETE POST: Successfully deleted image (public_id: {image_public_id_to_delete}) from Cloudinary for post {post_id}")
-                except Exception as img_del_e:
-                    current_app.logger.error(
-                        f"DELETE POST: Failed to delete Cloudinary image for post {post_id} (public_id: {image_public_id_to_delete}): {img_del_e}",
-                        exc_info=True)
-                    flash("Post deleted from database, but failed to remove associated image from Cloudinary.",
-                          "warning")
-            elif image_public_id_to_delete:
-                current_app.logger.warning(
-                    f"DELETE POST: Cloudinary not configured, skipping deletion of image (public_id: {image_public_id_to_delete}) for post {post_id}.")
+    try:
+        if image_public_id_to_delete and current_app.config.get(
+                'CLOUDINARY_CLOUD_NAME'):
+            try:
+                cloudinary.uploader.destroy(image_public_id_to_delete)
+            except Exception as img_del_e:
+                current_app.logger.error(
+                    f"Failed to delete Cloudinary image for post {post_id}: {img_del_e}",
+                    exc_info=True)
+                flash(
+                    "Post deleted, but failed to remove image from cloud storage.",
+                    "warning")
 
-            db.session.delete(post_to_delete)
-            db.session.commit()
-            flash(f'Post "{post_title}" has been deleted successfully!', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error deleting post "{post_title}". Please try again.', 'danger')
-            current_app.logger.error(f"DB Error deleting post {post_id} ('{post_title}'): {e}", exc_info=True)
-    else:
-        flash('Invalid request method for deleting post.', 'warning')
-        current_app.logger.warning(f"Invalid method '{request.method}' for deleting post {post_id}.")
+        db.session.delete(post_to_delete)
+        db.session.commit()
+        flash(f'Post "{post_title}" has been deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting post "{post_title}". Please try again.',
+              'danger')
+        current_app.logger.error(
+            f"DB Error deleting post {post_id} ('{post_title}'): {e}",
+            exc_info=True)
 
     return redirect(url_for('main.admin_dashboard'))
 
@@ -748,20 +724,22 @@ def rss_feed():
 
     blog_name = current_app.config.get('BLOG_NAME', 'My Fragrance Blog')
     blog_author_name = current_app.config.get('BLOG_AUTHOR_NAME', 'Blog Admin')
-    blog_author_email = current_app.config.get('BLOG_AUTHOR_EMAIL', 'noreply@example.com')
+    blog_author_email = current_app.config.get('BLOG_AUTHOR_EMAIL',
+                                               'noreply@example.com')
     posts_for_feed = current_app.config.get('RSS_FEED_POST_LIMIT', 20)
 
     fg.id(request.url_root)
     fg.title(f'{blog_name} - Latest Posts')
     fg.link(href=url_for('main.index', _external=True), rel='alternate')
-    fg.subtitle(current_app.config.get('BLOG_SUBTITLE', 'Reviews, musings, and guides on the world of scents.'))
+    fg.subtitle(current_app.config.get('BLOG_SUBTITLE',
+                                       'Reviews, musings, and guides on the world of scents.'))
     fg.language(current_app.config.get('BLOG_LANGUAGE', 'en'))
     fg.author({'name': blog_author_name, 'email': blog_author_email})
     fg.link(href=url_for('main.rss_feed', _external=True), rel='self')
 
     latest_posts = db.session.scalars(
-        sa.select(Post).order_by(Post.timestamp.desc()).limit(posts_for_feed)
-    ).all()
+        sa.select(Post).order_by(Post.timestamp.desc()).limit(
+            posts_for_feed)).all()
 
     for post_item in latest_posts:
         fe = fg.add_entry()
@@ -769,42 +747,32 @@ def rss_feed():
         fe.id(entry_url)
         fe.title(post_item.title)
         fe.link(href=entry_url)
-
-        # Use helper functions for stripping HTML and truncating
         stripped_body = custom_striptags(post_item.body)
         summary = custom_truncate(stripped_body, length=300, end='...')
         fe.summary(summary)
-        # fe.content(post_item.body, type='html') # Optionally include full HTML content
-
-        fe.pubDate(post_item.timestamp)  # Ensure timestamp is timezone-aware for consistency
-        if post_item.author:  # Add post author if available
+        fe.pubDate(post_item.timestamp)
+        if post_item.author:
             fe.author({'name': post_item.author.username})
 
     rss_feed_xml = fg.rss_str(pretty=True)
     return Response(rss_feed_xml, mimetype='application/rss+xml')
 
 
-# === EDIT COMMENT ROUTE ===
 @bp.route('/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_comment(comment_id):
     """Allows a user to edit their own comment."""
-    # Find the comment by its ID, or return 404
     comment = db.get_or_404(Comment, comment_id)
-
-    # SECURITY CHECK: Ensure the current user is the author OR an admin
     if comment.commenter != current_user and not current_user.is_admin:
         flash('You do not have permission to edit this comment.', 'danger')
         return redirect(url_for('main.post', slug=comment.post.slug))
 
     form = EditCommentForm()
     if form.validate_on_submit():
-        # Update the comment's body with the form data
         comment.body = form.body.data
         try:
             db.session.commit()
             flash('Your comment has been updated.', 'success')
-            # Redirect back to the post the comment belongs to
             return redirect(url_for('main.post', slug=comment.post.slug,
                                     _anchor=f'comment-{comment.id}'))
         except Exception as e:
@@ -815,7 +783,6 @@ def edit_comment(comment_id):
                 'An error occurred while updating your comment. Please try again.',
                 'danger')
 
-    # On a GET request, pre-populate the form with the existing comment text
     elif request.method == 'GET':
         form.body.data = comment.body
 
@@ -823,16 +790,12 @@ def edit_comment(comment_id):
                            comment=comment)
 
 
-# === DELETE COMMENT ROUTE ===
-@bp.route('/comment/<int:comment_id>/delete',
-          methods=['POST'])  # Use POST for deletions
+@bp.route('/comment/<int:comment_id>/delete', methods=['POST'])
 @login_required
 def delete_comment(comment_id):
     """Allows a user to delete their own comment."""
     comment = db.get_or_404(Comment, comment_id)
-    post_slug = comment.post.slug  # Save the slug before deleting the comment
-
-    # SECURITY CHECK: Ensure the current user is the author OR an admin
+    post_slug = comment.post.slug
     if comment.commenter != current_user and not current_user.is_admin:
         flash('You do not have permission to delete this comment.', 'danger')
         return redirect(url_for('main.post', slug=post_slug))
@@ -850,25 +813,27 @@ def delete_comment(comment_id):
     return redirect(url_for('main.post', slug=post_slug))
 
 
-# Route to serve robots.txt from the static folder
 @bp.route('/robots.txt')
 def serve_robots_txt():
     return send_from_directory(current_app.static_folder, 'robots.txt')
 
-# === <<< SEARCH ROUTE >>> ---
+
+# CORRECTED: Added logic to prevent empty searches
 @bp.route('/search')
 def search():
-    """Handles post search queries."""
+    """Handles post search queries, preventing empty searches."""
     query_param = request.args.get('q', '', type=str).strip()
 
+    # --- FIX: Prevent search on empty string ---
     if not query_param:
-        flash("Please enter a search term.", "info")
-        # Render the search results page but with no results
-        return render_template('search_results.html', title="Search", query=query_param, posts=[], pagination=None)
+        # Don't flash a message, just show the empty page. Flashing can be annoying if the user just clicks the button.
+        return render_template('search_results.html', title="Search", query='',
+                               posts=[], pagination=None)
 
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('SEARCH_RESULTS_PER_PAGE', 10)
     search_term = f"%{query_param}%"
+
     query = sa.select(Post).where(
         sa.or_(
             Post.title.ilike(search_term),
@@ -876,132 +841,106 @@ def search():
         )
     ).order_by(Post.timestamp.desc())
 
-    pagination = db.paginate(query, page=page, per_page=per_page, error_out=False)
+    pagination = db.paginate(query, page=page, per_page=per_page,
+                             error_out=False)
     posts = pagination.items
-
-    next_url = url_for('main.search', q=query_param, page=pagination.next_num) if pagination.has_next else None
-    prev_url = url_for('main.search', q=query_param, page=pagination.prev_num) if pagination.has_prev else None
 
     return render_template('search_results.html',
                            title=f"Search Results for '{query_param}'",
                            query=query_param,
                            posts=posts,
-                           next_url=next_url,
-                           prev_url=prev_url,
                            pagination=pagination)
-# --- <<< END SEARCH ROUTE >>> ---
+
 
 @bp.route('/sitemap.xml')
 def sitemap():
     """Generates an XML sitemap for search engines."""
-
-    # Initialize a list to hold all page data for the sitemap
     pages_for_sitemap = []
 
-    # --- Define and add STATIC pages ---
     static_page_definitions = [
         {'endpoint': 'main.index', 'priority': '1.0', 'changefreq': 'daily'},
-        {'endpoint': 'main.contact', 'priority': '0.7', 'changefreq': 'monthly'},
-        # Example: {'endpoint': 'main.about', 'priority': '0.6', 'changefreq': 'yearly'}, # If you add an 'about' page
+        {'endpoint': 'main.contact', 'priority': '0.7',
+         'changefreq': 'monthly'},
     ]
     for page_def in static_page_definitions:
-        try:  # Add try-except around url_for in case a route is temporarily undefined
+        try:
             pages_for_sitemap.append({
                 'loc': url_for(page_def['endpoint'], _external=True),
-                'lastmod': datetime.now(timezone.utc).strftime("%Y-%m-%d"),  # Current date for static pages
+                'lastmod': datetime.now(timezone.utc).strftime("%Y-%m-%d"),
                 'priority': page_def['priority'],
                 'changefreq': page_def['changefreq']
             })
         except Exception as e:
-            current_app.logger.error(f"Error generating URL for static sitemap page '{page_def['endpoint']}': {e}",
-                                     exc_info=True)
+            current_app.logger.error(
+                f"Error generating URL for static sitemap page '{page_def['endpoint']}': {e}")
 
-    # --- Add DYNAMIC pages: Blog Posts ---
     try:
-        posts = db.session.scalars(sa.select(Post).order_by(Post.timestamp.desc())).all()
+        posts = db.session.scalars(
+            sa.select(Post).order_by(Post.timestamp.desc())).all()
         for post_item in posts:
-            try:  # Add try-except for individual post URL generation
-                pages_for_sitemap.append({
-                    'loc': url_for('main.post', slug=post_item.slug, _external=True),
-                    'lastmod': post_item.timestamp.strftime("%Y-%m-%d"),  # Use the post's actual timestamp
-                    'priority': '0.9',
-                    'changefreq': 'weekly'
-                })
-            except Exception as e:
-                current_app.logger.error(
-                    f"Error generating URL for sitemap post (ID: {post_item.id}, Slug: {post_item.slug}): {e}",
-                    exc_info=True)
+            pages_for_sitemap.append({
+                'loc': url_for('main.post', slug=post_item.slug,
+                               _external=True),
+                'lastmod': post_item.timestamp.strftime("%Y-%m-%d"),
+                'priority': '0.9',
+                'changefreq': 'weekly'
+            })
     except Exception as e:
-        current_app.logger.error(f"Error fetching posts for sitemap: {e}", exc_info=True)
+        current_app.logger.error(f"Error fetching posts for sitemap: {e}",
+                                 exc_info=True)
 
-    # --- Add DYNAMIC pages: Tags ---
     try:
         tags = db.session.scalars(sa.select(Tag).order_by(Tag.name)).all()
         for tag_item in tags:
-            try:  # Add try-except for individual tag URL generation
-                # Optional: Only include tags that actually have posts associated.
-                # post_count = db.session.query(post_tags.c.post_id).filter_by(tag_id=tag_item.id).count()
-                # if post_count > 0:
-                pages_for_sitemap.append({
-                    'loc': url_for('main.tag', tag_name=tag_item.name, _external=True),
-                    'lastmod': datetime.now(timezone.utc).strftime("%Y-%m-%d"),  # Or find newest post with this tag
-                    'priority': '0.5',
-                    'changefreq': 'weekly'
-                })
-            except Exception as e:
-                current_app.logger.error(
-                    f"Error generating URL for sitemap tag (ID: {tag_item.id}, Name: {tag_item.name}): {e}",
-                    exc_info=True)
+            pages_for_sitemap.append({
+                'loc': url_for('main.tag', tag_name=tag_item.name,
+                               _external=True),
+                'lastmod': datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                'priority': '0.5',
+                'changefreq': 'weekly'
+            })
     except Exception as e:
-        current_app.logger.error(f"Error fetching tags for sitemap: {e}", exc_info=True)
+        current_app.logger.error(f"Error fetching tags for sitemap: {e}",
+                                 exc_info=True)
 
-    # --- Render the XML template with the collected pages ---
-    sitemap_xml_content = render_template('sitemap_template.xml', pages=pages_for_sitemap)
-
-    # --- Create and return the XML response ---
+    sitemap_xml_content = render_template('sitemap_template.xml',
+                                          pages=pages_for_sitemap)
     response = make_response(sitemap_xml_content)
     response.headers["Content-Type"] = "application/xml"
-
-    current_app.logger.info("Sitemap.xml generated successfully with %s URLs.", len(pages_for_sitemap))
     return response
 
 
-
-# === ADMIN ACCOUNT MANAGEMENT ROUTE ===
+# === ADMIN ACCOUNT MANAGEMENT ROUTE (CORRECTED) ===
 @bp.route('/admin/account', methods=['GET', 'POST'])
-@admin_required # Only admins can access this
-# def admin_account():
-#     # Temporarily bypass the form for testing
-#    return render_template('admin/account_test.html', title='Admin Account Test')
-@admin_required
+@admin_required  # CORRECTED: Fixed typo from @admin_red
 def admin_account():
     """Allows an admin to change their own password."""
-    password_form = AdminChangePasswordForm()
+    # CORRECTED: Changed AdminChangePasswordForm to ChangePasswordForm
+    password_form = ChangePasswordForm()
 
     if password_form.validate_on_submit():
-        # Check if the current password is correct
         if current_user.check_password(password_form.current_password.data):
-            # Set the new password
             current_user.set_password(password_form.new_password.data)
             try:
                 db.session.commit()
-                flash('Your password has been changed successfully!', 'success')
-                # Log the user out for security after a password change
+                flash(
+                    'Your password has been changed successfully! For security, please log in again.',
+                    'success')
                 logout_user()
                 return redirect(url_for('main.login'))
             except Exception as e:
                 db.session.rollback()
-                current_app.logger.error(f"Error changing password for user {current_user.username}: {e}", exc_info=True)
-                flash('An error occurred while changing your password. Please try again.', 'danger')
+                current_app.logger.error(
+                    f"Error changing password for user {current_user.username}: {e}",
+                    exc_info=True)
+                flash(
+                    'An error occurred while changing your password. Please try again.',
+                    'danger')
         else:
-            flash('Incorrect current password. Please try again.', 'danger')
+            # Use a specific error on the form field for better UX
+            password_form.current_password.errors.append(
+                'Incorrect current password.')
 
-    # I can add more forms here later, like for changing email/username
     return render_template('admin/account.html',
-                           title='Admin Account',
+                           title='Admin Account Management',
                            password_form=password_form)
-
-
-
-
-# === End of routes.py ===
