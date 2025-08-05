@@ -4,24 +4,25 @@ from logging.config import fileConfig
 
 from flask import current_app
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
-# Set the database URL
-if os.environ.get('DATABASE_URL'):
-    config.set_main_option('sqlalchemy.url', os.environ['DATABASE_URL'].replace("postgres://", "postgresql://", 1))
-else:
-    project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    instance_folder = os.path.join(project_dir, 'instance')
-    os.makedirs(instance_folder, exist_ok=True)
-    local_db_path = os.path.join(instance_folder, 'app.db')
-    config.set_main_option('sqlalchemy.url', 'sqlite:///' + local_db_path)
+project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+instance_folder = os.path.join(project_dir, 'instance')
+os.makedirs(instance_folder, exist_ok=True)
+local_db_path = os.path.join(instance_folder, 'app.db')
+local_db_uri = 'sqlite:///' + local_db_path
+
+
+db_url_to_use = os.environ.get('DATABASE_URL', local_db_uri)
+if "postgres://" in db_url_to_use:
+    db_url_to_use = db_url_to_use.replace("postgres://", "postgresql://", 1)
+
+config.set_main_option('sqlalchemy.url', db_url_to_use)
 
 target_db = current_app.extensions['migrate'].db
 
@@ -53,7 +54,11 @@ def run_migrations_online():
     if conf_args.get("process_revision_directives") is None:
         conf_args["process_revision_directives"] = process_revision_directives
 
-    connectable = current_app.extensions['migrate'].db.get_engine()
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
     with connectable.connect() as connection:
         context.configure(
