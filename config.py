@@ -52,6 +52,7 @@ class Config:
 
     # --- APP SPECIFIC SETTINGS ---
     BLOG_NAME = os.environ.get('BLOG_NAME', 'My Fragrance Blog')
+    GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID')
     SIDEBAR_RECENT_POSTS_COUNT = 5
     SIDEBAR_POPULAR_TAGS_COUNT = 10
     SIGNUP_RATE_LIMIT = "5 per hour;20 per day"
