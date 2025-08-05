@@ -1,170 +1,107 @@
-/* app/static/style.css - Final "Haute Couture" Version */
+/* app/static/style.css */
 
-/* === 1. Variables & Root Settings === */
+/* 1. DEFINE COLOR PALETTE AS CSS VARIABLES */
 :root {
-  /* Your Color Palette - I'm using this as the base */
-  --clr-background: #f8f9fa;      /* A slightly softer off-white from Bootstrap */
-  --clr-text: #212529;          /* Standard dark text for readability */
-  --clr-primary: #005f73;      /* Your Deep Teal/Peacock Blue */
-  --clr-secondary: #6c757d;    /* Standard Bootstrap grey */
-  --clr-accent: #ae2012;       /* Your Deep, muted Red/Rust */
-  --clr-light-grey: #e9ecef;   /* Light border/subtle background */
-  --clr-white: #ffffff;
-  --clr-link: var(--clr-primary);
-  --clr-link-hover: #003f4d;   /* Darker teal for hover */
-
-  /* NEW: Typography from Google Fonts */
-  --font-sans: 'Source Sans 3', sans-serif;
-  --font-serif: 'Lora', serif;
-
-  /* Spacing & Borders */
-  --spacing-base: 1rem;
-  --spacing-small: 0.5rem;
-  --spacing-large: 1.5rem;
-  --border-radius-base: 0.25rem; /* Standard Bootstrap rounding */
+  /* Light Mode Palette (Default) */
+  --bg-color: #f8f9fa;       /* A very light grey, easier on the eyes than pure white */
+  --text-color: #212529;     /* Standard dark text */
+  --card-bg: #ffffff;        /* Cards are white */
+  --card-border: #dee2e6;
+  --link-color: #0d6efd;      /* Default Bootstrap blue */
+  --link-hover-color: #0a58ca;
+  --secondary-text-color: #6c757d; /* Muted text for timestamps, etc. */
+  --border-color: #e9ecef;   /* Borders for sections */
+  --button-primary-bg: #0d6efd;
+  --button-primary-text: #ffffff;
+  --button-outline-border: #0d6efd;
+  --button-outline-text: #0d6efd;
+  --navbar-bg: #212529; /* Dark navbar in both modes */
 }
 
-/* --- Dark Mode Variables --- */
 [data-bs-theme="dark"] {
-  --clr-background: #121212; /* A deep, rich dark background */
-  --clr-text: #e9ecef;
-  --clr-primary: #9ef0f0;    /* A vibrant teal accent for dark mode */
-  --clr-secondary: #adb5bd;
-  --clr-light-grey: #343a40; /* Darker borders */
-  --clr-white: #212529;      /* Card backgrounds in dark mode */
-  --clr-link: var(--clr-primary);
-  --clr-link-hover: #ffffff;
+  /* Dark Mode Palette */
+  --bg-color: #1a1a1a;       /* A very dark, soft black */
+  --text-color: #e9ecef;     /* Light grey text */
+  --card-bg: #212529;        /* Dark grey for cards */
+  --card-border: #495057;
+  --link-color: #4dabf7;      /* A nice, brighter blue for dark mode */
+  --link-hover-color: #74c0fc;
+  --secondary-text-color: #adb5bd;
+  --border-color: #343a40;
+  --button-primary-bg: #4dabf7;
+  --button-primary-text: #1a1a1a; /* Dark text on light blue button */
+  --button-outline-border: #4dabf7;
+  --button-outline-text: #4dabf7;
 }
 
+/* 2. APPLY THE VARIABLES TO YOUR SITE */
 
-/* --- 2. Typography & Base Styles --- */
 body {
-  font-family: var(--font-sans);
-  background-color: var(--clr-background);
-  color: var(--clr-text);
-  font-size: 1.1rem; /* Slightly larger for readability */
-  line-height: 1.7;  /* More space between lines */
-  padding-top: 70px; /* Account for the fixed navbar */
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Source Sans 3', sans-serif;
+  padding-top: 70px; /* From your base.html */
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  color: var(--clr-text);
-}
-
-.article-title, .content-section legend, .card-header h4 {
-  font-family: var(--font-serif);
-}
-
-a {
-  color: var(--clr-link);
-  text-decoration: none;
-  transition: color 0.2s ease-in-out;
-}
-
-a:hover {
-  color: var(--clr-link-hover);
-  text-decoration: underline;
-}
-
-
-/* --- 3. Navbar --- */
-.navbar-dark {
-  /* Using Bootstrap's default bg-dark is fine, or use your primary color */
-  /* background-color: var(--clr-primary) !important; */
-}
-.navbar-brand {
-  font-family: var(--font-serif);
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-
-/* --- 4. Content Sections & Cards --- */
-.content-section, .card {
-  background: var(--clr-white);
-  border: 1px solid var(--clr-light-grey);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-/* Make sidebar card headers match body text color for subtlety */
-.card-header {
-    color: var(--clr-text);
-    background-color: var(--clr-background);
-}
-
-
-/* --- 5. Article / Post Styling --- */
-.article-metadata {
-  padding-bottom: var(--spacing-small);
-  margin-bottom: var(--spacing-base);
-  border-bottom: 1px solid var(--clr-light-grey);
-  font-size: 0.875rem;
-  color: var(--clr-secondary);
-}
-.article-metadata a {
-  color: var(--clr-secondary);
-  font-weight: 600;
+.content-section {
+  background: var(--card-bg);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  margin-bottom: 20px;
 }
 
 .article-title {
-  font-size: 2.5rem;
-  color: var(--clr-text);
+  color: var(--text-color);
   text-decoration: none;
 }
+
 .article-title:hover {
-  color: var(--clr-primary);
-  text-decoration: none;
+    color: var(--link-color);
+}
+
+.article-metadata {
+  padding-bottom: 1px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.article-metadata a {
+    color: var(--secondary-text-color);
+    text-decoration: none;
+}
+
+.article-metadata a:hover {
+    color: var(--link-color);
 }
 
 .article-content {
-  margin-top: var(--spacing-base);
-  font-size: 1.15rem; /* Slightly larger for the main content */
-  line-height: 1.8;
-}
-.article-content p {
-  margin-bottom: 1.5em; /* Classic paragraph spacing */
-}
-.article-content blockquote {
-    border-left: 3px solid var(--clr-primary);
-    padding-left: 1.5rem;
-    margin-left: 0;
-    margin-right: 0;
-    font-style: italic;
-    color: var(--clr-secondary);
-}
-.article-content img {
-    max-width: 100%;
-    height: auto;
-    border-radius: var(--border-radius-base);
+  white-space: pre-line; /* Respects line breaks in your posts */
 }
 
-/* --- 6. Comments Styling --- */
-.comment {
-  border-bottom: 1px solid var(--clr-light-grey);
-  padding-bottom: var(--spacing-base);
-}
-.comment:last-of-type {
-   border-bottom: none;
-}
-.comment p {
-    margin-top: var(--spacing-small);
-    margin-bottom: 0;
-    font-size: 1rem;
+/* --- Fix button colors --- */
+.btn-primary {
+    background-color: var(--button-primary-bg) !important;
+    color: var(--button-primary-text) !important;
+    border-color: var(--button-primary-bg) !important;
 }
 
-/* --- 7. Search Highlight --- */
+.btn-outline-info, .btn-outline-secondary {
+    border-color: var(--button-outline-border) !important;
+    color: var(--button-outline-text) !important;
+}
+
+.btn-outline-info:hover, .btn-outline-secondary:hover {
+    background-color: var(--button-outline-border) !important;
+    color: var(--button-primary-text) !important;
+}
+
+/* Ensure navbar stays dark consistently */
+.navbar-dark {
+    background-color: var(--navbar-bg) !important;
+}
+
 .search-highlight {
-    background-color: #fff3cd;
-    padding: 0.1em 0.2em;
-    border-radius: 3px;
-    font-weight: 600;
-    color: #664d03;
-}
-
-/* Dark mode specific highlight */
-[data-bs-theme="dark"] .search-highlight {
-    background-color: #664d03;
-    color: #fff3cd;
+    background-color: #ffd700; /* A distinct highlight color that works on both light/dark */
+    color: #000000;
 }
