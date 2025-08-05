@@ -1,57 +1,66 @@
-/* app/static/style.css - Refined Style Foundation */
+/* app/static/style.css - Final "Haute Couture" Version */
 
 /* === 1. Variables & Root Settings === */
 :root {
-  /* Color Palette (Examples - Adjust to my palette!) */
-  --clr-background: #fdfdfd; /* Very light grey/off-white */
-  --clr-text: #333a40;        /* Dark grey-blue for text */
-  --clr-primary: #005f73;    /* Deep Teal/Peacock Blue (Sophisticated, Masculine) */
-  --clr-secondary: #6c757d;  /* Standard Bootstrap grey (Subdued) */
-  --clr-accent: #ae2012;     /* Deep, muted Red/Rust (Playful/Warm Accent) */
-  --clr-light-grey: #e9ecef; /* Light border/subtle background */
+  /* Your Color Palette - I'm using this as the base */
+  --clr-background: #f8f9fa;      /* A slightly softer off-white from Bootstrap */
+  --clr-text: #212529;          /* Standard dark text for readability */
+  --clr-primary: #005f73;      /* Your Deep Teal/Peacock Blue */
+  --clr-secondary: #6c757d;    /* Standard Bootstrap grey */
+  --clr-accent: #ae2012;       /* Your Deep, muted Red/Rust */
+  --clr-light-grey: #e9ecef;   /* Light border/subtle background */
   --clr-white: #ffffff;
   --clr-link: var(--clr-primary);
-  --clr-link-hover: #003f4d; /* Darker teal */
+  --clr-link-hover: #003f4d;   /* Darker teal for hover */
 
-  /* Typography (web fonts later) */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: 'Georgia', Times, 'Times New Roman', serif; /* *** Classic touch but change this later if I don't love it*/
-  --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* NEW: Typography from Google Fonts */
+  --font-sans: 'Source Sans 3', sans-serif;
+  --font-serif: 'Lora', serif;
 
   /* Spacing & Borders */
   --spacing-base: 1rem;
   --spacing-small: 0.5rem;
   --spacing-large: 1.5rem;
-  --border-radius-base: 4px; /* Subtle rounding */
-  --border-width-base: 1px;
+  --border-radius-base: 0.25rem; /* Standard Bootstrap rounding */
 }
 
-/* Apply base font and background */
+/* --- Dark Mode Variables --- */
+[data-bs-theme="dark"] {
+  --clr-background: #121212; /* A deep, rich dark background */
+  --clr-text: #e9ecef;
+  --clr-primary: #9ef0f0;    /* A vibrant teal accent for dark mode */
+  --clr-secondary: #adb5bd;
+  --clr-light-grey: #343a40; /* Darker borders */
+  --clr-white: #212529;      /* Card backgrounds in dark mode */
+  --clr-link: var(--clr-primary);
+  --clr-link-hover: #ffffff;
+}
+
+
+/* --- 2. Typography & Base Styles --- */
 body {
   font-family: var(--font-sans);
   background-color: var(--clr-background);
   color: var(--clr-text);
-  line-height: 1.6; /* Improve readability */
+  font-size: 1.1rem; /* Slightly larger for readability */
+  line-height: 1.7;  /* More space between lines */
+  padding-top: 70px; /* Account for the fixed navbar */
 }
 
-/* --- 2. Typography --- */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif); /* Serif for headings adds 'refinement' */
-  color: var(--clr-primary);     
-  margin-top: var(--spacing-large);
-  margin-bottom: var(--spacing-base);
-  font-weight: 600; 
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--clr-text);
 }
 
-/* Adjust specific heading sizes if needed */
-h1 { font-size: 2.25rem; }
-h2 { font-size: 1.75rem; } /* Like article titles */
-h3 { font-size: 1.35rem; } /* Like sidebar/comment headers */
+.article-title, .content-section legend, .card-header h4 {
+  font-family: var(--font-serif);
+}
 
 a {
   color: var(--clr-link);
-  text-decoration: none; /* Cleaner look */
-  transition: color 0.15s ease-in-out;
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
 }
 
 a:hover {
@@ -59,215 +68,103 @@ a:hover {
   text-decoration: underline;
 }
 
-/* --- 3. Layout & Containers --- */
-main.container {
-  padding-top: var(--spacing-base);
-  padding-bottom: var(--spacing-large);
-}
 
-/* --- 4. Navbar --- */
+/* --- 3. Navbar --- */
 .navbar-dark {
-  background-color: var(--clr-primary) !important; 
+  /* Using Bootstrap's default bg-dark is fine, or use your primary color */
+  /* background-color: var(--clr-primary) !important; */
 }
-.navbar-dark .navbar-brand {
-  font-family: var(--font-serif); /* Match headings */
-  font-weight: 700;
-  color: var(--clr-white) !important; /* Ensure contrast */
-  border: none !important; /* Remove ridiculous test border */
-}
-.navbar-dark .navbar-nav .nav-link {
-  color: rgba(255, 255, 255, 0.85) !important; 
-}
-.navbar-dark .navbar-nav .nav-link:hover,
-.navbar-dark .navbar-nav .nav-link:focus,
-.navbar-dark .navbar-nav .nav-link.active { /* Style active link */
-  color: var(--clr-white) !important;
-}
-/* Search button styling */
-.navbar-dark .btn-outline-light {
-    --bs-btn-color: rgba(255, 255, 255, 0.85);
-    --bs-btn-border-color: rgba(255, 255, 255, 0.5);
-    --bs-btn-hover-color: var(--clr-primary); /* Invert on hover */
-    --bs-btn-hover-bg: var(--clr-white);
-    --bs-btn-hover-border-color: var(--clr-white);
-    --bs-btn-active-color: var(--clr-primary);
-    --bs-btn-active-bg: var(--clr-white);
-    --bs-btn-active-border-color: var(--clr-white);
+.navbar-brand {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 
-/* --- 5. Content Sections (Main Content & Sidebar) --- */
-.content-section {
+/* --- 4. Content Sections & Cards --- */
+.content-section, .card {
   background: var(--clr-white);
-  padding: var(--spacing-base) var(--spacing-large);
-  border: var(--border-width-base) solid var(--clr-light-grey);
-  border-radius: var(--border-radius-base);
-  margin-bottom: var(--spacing-large);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+  border: 1px solid var(--clr-light-grey);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-/* --- 6. Article / Post Styling --- */
+/* Make sidebar card headers match body text color for subtlety */
+.card-header {
+    color: var(--clr-text);
+    background-color: var(--clr-background);
+}
+
+
+/* --- 5. Article / Post Styling --- */
 .article-metadata {
   padding-bottom: var(--spacing-small);
   margin-bottom: var(--spacing-base);
-  border-bottom: var(--border-width-base) solid var(--clr-light-grey);
+  border-bottom: 1px solid var(--clr-light-grey);
   font-size: 0.875rem;
-  color: var(--clr-secondary); 
-  background-color: transparent !important;
+  color: var(--clr-secondary);
 }
 .article-metadata a {
-  color: var(--clr-secondary); /* Make author name blend more */
-  font-weight: 600; /* Slightly bolder */
-}
-.article-metadata a:hover {
-  color: var(--clr-text);
+  color: var(--clr-secondary);
+  font-weight: 600;
 }
 
 .article-title {
-  font-family: var(--font-serif); 
-  color: var(--clr-text); 
-  margin-bottom: var(--spacing-small); /* Reduce space after title */
+  font-size: 2.5rem;
+  color: var(--clr-text);
+  text-decoration: none;
 }
 .article-title:hover {
-  color: var(--clr-primary); /* Use primary color on hover */
-  background-color: transparent !important; /* Remove test background */
+  color: var(--clr-primary);
+  text-decoration: none;
 }
 
 .article-content {
-    margin-top: var(--spacing-base);
+  margin-top: var(--spacing-base);
+  font-size: 1.15rem; /* Slightly larger for the main content */
+  line-height: 1.8;
 }
-/* Styles for content generated by TinyMCE */
 .article-content p {
-  margin-bottom: var(--spacing-base);
-  color: var(--clr-text); /* Ensure main text color */
-  font-family: var(--font-sans); /* Body font */
-}
-.article-content h1,
-.article-content h2,
-.article-content h3,
-.article-content h4,
-.article-content h5,
-.article-content h6 {
-  margin-top: var(--spacing-large);
-  margin-bottom: var(--spacing-small);
-  font-weight: 600;
-  color: var(--clr-text); /* Use text color for subheadings within content */
-}
-.article-content ul,
-.article-content ol {
-  padding-left: 2em; /* Indent lists */
-  margin-bottom: var(--spacing-base);
+  margin-bottom: 1.5em; /* Classic paragraph spacing */
 }
 .article-content blockquote {
-    border-left: 4px solid var(--clr-light-grey);
-    padding-left: var(--spacing-base);
+    border-left: 3px solid var(--clr-primary);
+    padding-left: 1.5rem;
     margin-left: 0;
     margin-right: 0;
     font-style: italic;
     color: var(--clr-secondary);
 }
-.article-content img { /* Ensure images added via RTE are responsive */
+.article-content img {
     max-width: 100%;
     height: auto;
-    margin-top: var(--spacing-small);
-    margin-bottom: var(--spacing-small);
-    border-radius: var(--border-radius-base); /* Optional: round images */
+    border-radius: var(--border-radius-base);
 }
 
-/* Featured Image specific styling */
-.post-image img {
-    border-radius: var(--border-radius-base); /* Match other elements */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
-}
-
-/* --- 7. Tags Styling --- */
-.post-tags {
-    margin-top: var(--spacing-base); /* Space above tags */
-}
-.post-tags .badge {
-  font-size: 0.8rem;
-  padding: 0.35em 0.65em;
-  font-weight: 500; /* Less bold */
-  /* background-color: var(--clr-secondary) !important; */
-  /* color: var(--clr-white) !important; */
-  border-radius: var(--border-radius-base) !important; /* Match other rounding consistently */
-}
-.post-tags a.badge:hover {
-    background-color: var(--clr-primary) !important; /* Use primary color on hover */
-    color: var(--clr-white) !important;
-}
-/* Highlights current tag on tag page */
-.tag-highlight {
-    background-color: var(--clr-primary) !important;
-    color: var(--clr-white) !important;
-}
-
-/* --- 8. Comments Styling --- */
+/* --- 6. Comments Styling --- */
 .comment {
-  border-bottom: var(--border-width-base) solid var(--clr-light-grey); 
-  padding-top: var(--spacing-base);
+  border-bottom: 1px solid var(--clr-light-grey);
   padding-bottom: var(--spacing-base);
-  margin-bottom: 0; 
-  background: transparent !important; 
-  border-left: none !important; 
-  border-right: none !important;
-  border-top: none !important;
 }
-.comment:last-child {
+.comment:last-of-type {
    border-bottom: none;
 }
-.comment strong { /* Commenter name */
-    color: var(--clr-text);
-    font-weight: 600;
-}
-.comment p { /* Comment body text */
+.comment p {
     margin-top: var(--spacing-small);
     margin-bottom: 0;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
-/* --- 9. Forms --- */
-legend {
-    font-family: var(--font-serif);
-    font-weight: 600;
-}
-
-
-
-/* --- 10. Sidebar --- */
-.sidebar-section .content-section {
-    background-color: var(--clr-background); /* Blend with body bg */
-    box-shadow: none; /* Shadow begone */
-}
-.sidebar-section h3 {
-    color: var(--clr-secondary);
-    font-size: 1.2rem;
-}
-.sidebar-section .list-group-item {
-    background-color: transparent; /* Remove list item background */
-    border-color: var(--clr-light-grey);
-}
-
-/* --- 11. Pagination --- */
-.pagination .page-item.active .page-link {
-    background-color: var(--clr-primary); /* Use primary color */
-    border-color: var(--clr-primary);
-}
-.pagination .page-link {
-    color: var(--clr-primary);
-}
-.pagination .page-link:hover {
-    color: var(--clr-link-hover);
-}
-.pagination .page-item.disabled .page-link {
-    color: var(--clr-secondary);
-}
-
-/* --- 12. Search Highlight --- */
+/* --- 7. Search Highlight --- */
 .search-highlight {
-    background-color: #fff3cd; /* A light, non-obnoxious yellow */
+    background-color: #fff3cd;
     padding: 0.1em 0.2em;
     border-radius: 3px;
-    font-weight: 600; /* Bolder than normal text */
-    color: #664d03;   /* Darker text for contrast */
+    font-weight: 600;
+    color: #664d03;
+}
+
+/* Dark mode specific highlight */
+[data-bs-theme="dark"] .search-highlight {
+    background-color: #664d03;
+    color: #fff3cd;
 }
