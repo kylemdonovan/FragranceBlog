@@ -2,106 +2,60 @@
 
 /* 1. DEFINE COLOR PALETTE AS CSS VARIABLES */
 :root {
-  /* Light Mode Palette (Default) */
-  --bg-color: #f8f9fa;       /* A very light grey, easier on the eyes than pure white */
-  --text-color: #212529;     /* Standard dark text */
-  --card-bg: #ffffff;        /* Cards are white */
-  --card-border: #dee2e6;
-  --link-color: #0d6efd;      /* Default Bootstrap blue */
-  --link-hover-color: #0a58ca;
-  --secondary-text-color: #6c757d; /* Muted text for timestamps, etc. */
-  --border-color: #e9ecef;   /* Borders for sections */
-  --button-primary-bg: #0d6efd;
-  --button-primary-text: #ffffff;
-  --button-outline-border: #0d6efd;
-  --button-outline-text: #0d6efd;
-  --navbar-bg: #212529; /* Dark navbar in both modes */
+ /* Light Mode Palette (Default) */
+ --bg-color: #f8f9fa;
+ --text-color: #212529;
+ --card-bg: #ffffff;
+ --card-border: #dee2e6;
+ --link-color: #8B4513; /* A rich saddle brown */
+ --link-hover-color: #A0522D; /* A slightly lighter sienna */
+ --secondary-text-color: #6c757d;
+ --border-color: #e9ecef;
+ --button-primary-bg: #8B4513;
+ --button-primary-text: #ffffff;
+ --button-outline-border: #8B4513;
+ --button-outline-text: #8B4513;
+ --navbar-bg: #212529;
 }
 
 [data-bs-theme="dark"] {
-  /* Dark Mode Palette */
-  --bg-color: #1a1a1a;       /* A very dark, soft black */
-  --text-color: #e9ecef;     /* Light grey text */
-  --card-bg: #212529;        /* Dark grey for cards */
-  --card-border: #495057;
-  --link-color: #4dabf7;      /* A nice, brighter blue for dark mode */
-  --link-hover-color: #74c0fc;
-  --secondary-text-color: #adb5bd;
-  --border-color: #343a40;
-  --button-primary-bg: #4dabf7;
-  --button-primary-text: #1a1a1a; /* Dark text on light blue button */
-  --button-outline-border: #4dabf7;
-  --button-outline-text: #4dabf7;
+ /* Dark Mode Palette */
+ --bg-color: #1a1a1a;
+ --text-color: #e9ecef;
+ --card-bg: #212529;
+ --card-border: #495057;
+ --link-color: #D2B48C; /* A sophisticated tan */
+ --link-hover-color: #DEB887; /* A slightly lighter burlywood */
+ --secondary-text-color: #adb5bd;
+ --border-color: #343a40;
+ --button-primary-bg: #D2B48C;
+ --button-primary-text: #1a1a1a;
+ --button-outline-border: #D2B48C;
+ --button-outline-text: #D2B48C;
 }
 
 /* 2. APPLY THE VARIABLES TO YOUR SITE */
 
 body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-family: 'Source Sans 3', sans-serif;
-  padding-top: 70px; /* From your base.html */
+ background-color: var(--bg-color);
+ color: var(--text-color);
+ font-family: 'Playfair Display', serif; /* A more elegant font for headings */
+ padding-top: 70px;
+}
+
+h1, h2, h3, h4, h5, h6, .article-title {
+ font-family: 'Playfair Display', serif;
+}
+
+p, a, span, .article-content, .article-metadata {
+ font-family: 'Source Sans 3', sans-serif; /* A clean sans-serif for body copy */
 }
 
 .content-section {
-  background: var(--card-bg);
-  padding: 20px;
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
-  margin-bottom: 20px;
-}
-
-.article-title {
-  color: var(--text-color);
-  text-decoration: none;
-}
-
-.article-title:hover {
-    color: var(--link-color);
-}
-
-.article-metadata {
-  padding-bottom: 1px;
-  margin-bottom: 15px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.article-metadata a {
-    color: var(--secondary-text-color);
-    text-decoration: none;
-}
-
-.article-metadata a:hover {
-    color: var(--link-color);
-}
-
-.article-content {
-  white-space: pre-line; /* Respects line breaks in your posts */
-}
-
-/* --- Fix button colors --- */
-.btn-primary {
-    background-color: var(--button-primary-bg) !important;
-    color: var(--button-primary-text) !important;
-    border-color: var(--button-primary-bg) !important;
-}
-
-.btn-outline-info, .btn-outline-secondary {
-    border-color: var(--button-outline-border) !important;
-    color: var(--button-outline-text) !important;
-}
-
-.btn-outline-info:hover, .btn-outline-secondary:hover {
-    background-color: var(--button-outline-border) !important;
-    color: var(--button-primary-text) !important;
-}
-
-/* Ensure navbar stays dark consistently */
-.navbar-dark {
-    background-color: var(--navbar-bg) !important;
-}
-
-.search-highlight {
-    background-color: #ffd700; /* A distinct highlight color that works on both light/dark */
-    color: #000000;
+ background: var(--card-bg);
+ padding: 30px; /* Increased padding for a more spacious feel */
+ border: 1px solid var(--border-color);
+ border-radius: 8px; /* Slightly more rounded corners */
+ margin-bottom: 20px;
+ box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Subtle shadow for depth */
 }
