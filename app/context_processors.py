@@ -7,6 +7,7 @@ from app import db
 import sqlalchemy as sa
 from flask import current_app  # To access app config for number of items
 from datetime import datetime
+from app.forms import SubscriptionForm
 
 
 
@@ -55,10 +56,13 @@ def inject_sidebar_data():
         css_version = int(datetime.utcnow().timestamp())
     # --- END CACHE BUSTING ---
 
+    sub_form = SubscriptionForm()
+
     return dict(
-        sidebar_recent_posts=recent_posts,
-        sidebar_popular_tags=popular_tags,
-        now=datetime.utcnow,
-        css_version=css_version
+        sidebar_recent_posts = recent_posts,
+        sidebar_popular_tags = popular_tags,
+        now = datetime.utcnow,
+        css_version = css_version,
+        subscription_form = sub_form
 
     )
