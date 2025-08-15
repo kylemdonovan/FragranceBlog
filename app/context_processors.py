@@ -44,7 +44,7 @@ def inject_sidebar_data():
         current_app.logger.error(f"Error fetching popular tags for sidebar: {e}", exc_info=True)
         popular_tags = []
 
-    #START CACHE BUSTING
+    # --- START CACHE BUSTING ---
     try:
         # Get the full path to the CSS file
         css_file_path = os.path.join(current_app.static_folder, 'style.css')
@@ -53,7 +53,7 @@ def inject_sidebar_data():
     except (OSError, FileNotFoundError):
         # If file is not found, fallback to a default value (like current time)
         css_version = int(datetime.utcnow().timestamp())
-    #END CACHE BUSTING
+    # --- END CACHE BUSTING ---
 
     return dict(
         sidebar_recent_posts=recent_posts,
