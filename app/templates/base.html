@@ -1,14 +1,14 @@
 <!doctype html>
-<!-- The `data-bs-theme` attribute will be set by our new script -->
+<!-- The `data-bs-theme` will be set by the script below to prevent theme flickering -->
 <html lang="en">
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {# --- FIX 1: ANTI-FLICKER THEME SCRIPT --- #}
+    {# --- Anti-Flicker Theme Script (Executes First) --- #}
+    {# This script runs immediately to set the theme before the page content is rendered, preventing a flash of the incorrect theme. #}
     <script>
-      // This script runs immediately to prevent the flash of light mode on page load.
       (() => {
         const getStoredTheme = () => localStorage.getItem('theme');
         const getPreferredTheme = () => {
@@ -18,7 +18,6 @@
           }
           return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         };
-        // Set the theme on the <html> element as soon as possible.
         document.documentElement.setAttribute('data-bs-theme', getPreferredTheme());
       })();
     </script>
@@ -26,10 +25,15 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 
-    {# --- CSS OVERWRITE BOOTSTRAP --- #}
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Sans+3:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+
+    {# --- Custom Stylesheet (Cache-Busted) --- #}
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css', v=css_version) }}">
 
-    {# --- FAVICON LINKS --- #}
+    {# --- Favicon Links --- #}
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
@@ -43,20 +47,13 @@
     {# --- RSS Feed Link --- #}
     <link rel="alternate" type="application/rss+xml" title="{{ config.get('BLOG_NAME', 'Fragrance Blog') }} RSS Feed" href="{{ url_for('main.rss_feed', _external=True) }}">
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Sans+3:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
-
-    {# --- GOOGLE ANALYTICS SCRIPT --- #}
+    {# --- Google Analytics Script --- #}
     {% if config.get('GOOGLE_ANALYTICS_ID') %}
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ config.get('GOOGLE_ANALYTICS_ID') }}"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', '{{ config.get('GOOGLE_ANALYTICS_ID') }}');
     </script>
     {% endif %}
@@ -71,7 +68,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
              <div class="collapse navbar-collapse" id="navbarNav">
-                {# --- Left side is now empty to push search and actions to the right --- #}
+                {# The 'me-auto' class pushes all subsequent navigation items to the right. #}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
 
                 <form class="d-flex my-2 my-lg-0 me-lg-3" method="GET" action="{{ url_for('main.search') }}" role="search">
@@ -79,18 +76,16 @@
                   <button class="btn btn-outline-light" type="submit">Search</button>
                 </form>
 
-                {# --- Right side navigation items --- #}
+                {# --- Primary User Actions --- #}
                 <ul class="navbar-nav">
-                    {# --- FIX 3: MOVED CONTACT LINK HERE --- #}
+                    {# Contact link is grouped with other user actions for better navbar flow. #}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
                     </li>
                      {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
                              <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                  Admin
-                                </a>
+                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Admin</a>
                                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminDropdown">
                                   <li><a class="dropdown-item" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.create_post') }}">New Post</a></li>
@@ -101,28 +96,17 @@
                               </li>
                         {% endif %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Hi, {{ current_user.username }}!
-                            </a>
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Hi, {{ current_user.username }}!</a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
                                 <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
                             </ul>
                         </li>
                     {% else %}
-                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Login</a>
-                        </li>
-                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'main.signup' %}active{% endif %}" href="{{ url_for('main.signup') }}">Sign Up</a>
-                         </li>
+                         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Login</a></li>
+                         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.signup' %}active{% endif %}" href="{{ url_for('main.signup') }}">Sign Up</a></li>
                     {% endif %}
-                    <li class="nav-item ms-lg-2">
-                        <button class="btn btn-outline-light" id="theme-toggler" type="button" aria-label="Toggle theme">
-                            <!-- Icon will be set by the script at the bottom -->
-                        </button>
-                    </li>
+                    <li class="nav-item ms-lg-2"><button class="btn btn-outline-light" id="theme-toggler" type="button" aria-label="Toggle theme"></button></li>
                 </ul>
-
             </div>
         </div>
     </nav>
@@ -130,7 +114,6 @@
     <main role="main" class="container">
         <div class="row">
             <div class="col-md-8">
-                {# Flash messages #}
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
@@ -141,17 +124,12 @@
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
-
-                {# Main content block #}
                 {% block content %}{% endblock %}
             </div>
 
-            {# --- DYNAMIC SIDEBAR --- #}
             <div class="col-md-4">
                 <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-light">
-                        <h4 class="mb-0">Recent Posts</h4>
-                    </div>
+                    <div class="card-header bg-light"><h4 class="mb-0">Recent Posts</h4></div>
                     <div class="list-group list-group-flush">
                         {% if sidebar_recent_posts %}
                             {% for r_post in sidebar_recent_posts %}
@@ -168,11 +146,8 @@
                         {% endif %}
                     </div>
                 </div>
-
                 <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-light">
-                        <h4 class="mb-0">Popular Tags</h4>
-                    </div>
+                    <div class="card-header bg-light"><h4 class="mb-0">Popular Tags</h4></div>
                     <div class="card-body">
                         {% if sidebar_popular_tags %}
                             {% for s_tag in sidebar_popular_tags %}
@@ -183,15 +158,10 @@
                         {% endif %}
                     </div>
                 </div>
-
                 <div class="card shadow-sm">
-                     <div class="card-header bg-light">
-                        <h4 class="mb-0">About This Blog</h4>
-                    </div>
+                     <div class="card-header bg-light"><h4 class="mb-0">About This Blog</h4></div>
                     <div class="card-body">
-                        <p class='text-muted'>
-                            Welcome to my fragrance journey! Discover reviews, thoughts, and explorations into the captivating world of scents.
-                        </p>
+                        <p class='text-muted'>Welcome to my fragrance journey! Discover reviews, thoughts, and explorations into the captivating world of scents.</p>
                         <p class="mt-3">
                             <a href="{{ url_for('main.rss_feed', _external=True) }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-rss-fill me-1" viewBox="0 0 16 16">
@@ -211,7 +181,6 @@
             <div class="col-md-6">
                 <h5>Subscribe to Liquid Blossom</h5>
                 <p class="text-muted">Get the latest reviews and articles delivered straight to your inbox.</p>
-                {# --- FIX 2: This form will now appear thanks to the context_processor change --- #}
                 <form action="{{ url_for('main.subscribe') }}" method="POST" class="d-flex" novalidate>
                     {{ subscription_form.hidden_tag() }}
                     <div class="form-floating flex-grow-1">
@@ -228,37 +197,35 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 
-    {# --- FIX 1: MODIFIED THEME BUTTON LOGIC SCRIPT (NON-BLOCKING) --- #}
+    {# --- Theme Toggler Logic (Executes After DOM Load) --- #}
     <script>
-      // This script runs after the page is loaded to handle button clicks and icons.
       (() => {
         'use strict'
+        const themeToggler = document.querySelector('#theme-toggler');
+
         const getStoredTheme = () => localStorage.getItem('theme');
         const setStoredTheme = theme => localStorage.setItem('theme', theme);
 
-        const setThemeIcon = theme => {
-            const themeToggler = document.querySelector('#theme-toggler');
-            if (themeToggler) {
-              // Set the icon based on the *current* theme
-              themeToggler.innerHTML = (theme === 'dark') ? '☀️' : '🌙';
-            }
+        const setThemeIcon = () => {
+          if (themeToggler) {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            themeToggler.innerHTML = (currentTheme === 'dark') ? '☀️' : '🌙';
+          }
         }
 
-        // Set the initial icon when the DOM is ready
+        // Set the initial icon as soon as the DOM is ready to ensure it's always present.
         window.addEventListener('DOMContentLoaded', () => {
-            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-            setThemeIcon(currentTheme);
+          setThemeIcon();
 
-            const themeToggler = document.querySelector('#theme-toggler');
-            if (themeToggler) {
-                themeToggler.addEventListener('click', () => {
-                    const currentTheme = getStoredTheme() || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                    setStoredTheme(newTheme);
-                    document.documentElement.setAttribute('data-bs-theme', newTheme);
-                    setThemeIcon(newTheme);
-                });
-            }
+          if (themeToggler) {
+            themeToggler.addEventListener('click', () => {
+              const currentTheme = getStoredTheme() || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+              const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+              setStoredTheme(newTheme);
+              document.documentElement.setAttribute('data-bs-theme', newTheme);
+              setThemeIcon(); // Update the icon immediately on click
+            });
+          }
         });
       })()
     </script>

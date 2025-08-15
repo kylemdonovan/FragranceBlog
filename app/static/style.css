@@ -2,60 +2,121 @@
 
 /* 1. DEFINE COLOR PALETTE AS CSS VARIABLES */
 :root {
- /* Light Mode Palette (Default) */
- --bg-color: #f8f9fa;
- --text-color: #212529;
- --card-bg: #ffffff;
- --card-border: #dee2e6;
- --link-color: #8B4513; /* A rich saddle brown */
- --link-hover-color: #A0522D; /* A slightly lighter sienna */
- --secondary-text-color: #6c757d;
- --border-color: #e9ecef;
- --button-primary-bg: #8B4513;
- --button-primary-text: #ffffff;
- --button-outline-border: #8B4513;
- --button-outline-text: #8B4513;
- --navbar-bg: #212529;
+  /* Light Mode Palette (Default) */
+  --bg-color: #f8f9fa;               /* Soft off-white background */
+  --text-color: #212529;             /* Standard dark text for max readability */
+  --card-bg: #ffffff;                /* Clean white cards */
+  --link-color: #8B4513;              /* Your rich, saddle brown for links */
+  --link-hover-color: #A0522D;        /* A slightly lighter sienna for hover */
+  --secondary-text-color: #6c757d;   /* Muted grey for metadata */
+  --border-color: #dee2e6;
+  --button-primary-bg: #8B4513;
+  --button-primary-text: #ffffff;
+  --navbar-bg: #212529;               /* Keep the navbar consistently dark */
 }
 
 [data-bs-theme="dark"] {
- /* Dark Mode Palette */
- --bg-color: #1a1a1a;
- --text-color: #e9ecef;
- --card-bg: #212529;
- --card-border: #495057;
- --link-color: #D2B48C; /* A sophisticated tan */
- --link-hover-color: #DEB887; /* A slightly lighter burlywood */
- --secondary-text-color: #adb5bd;
- --border-color: #343a40;
- --button-primary-bg: #D2B48C;
- --button-primary-text: #1a1a1a;
- --button-outline-border: #D2B48C;
- --button-outline-text: #D2B48C;
+  /* Dark Mode Palette - Classy & Approachable */
+  --bg-color: #1c1c1e;               /* Soft, dark charcoal instead of pure black */
+  --text-color: #f2f2f7;             /* Off-white (like Apple's dark mode) for less eye strain */
+  --card-bg: #2c2c2e;                /* Slightly lighter charcoal for cards to create depth */
+  --link-color: #D4AF37;              /* A warm, desaturated gold for accents */
+  --link-hover-color: #E0C56E;        /* A brighter gold for hover */
+  --secondary-text-color: #adb5bd;
+  --border-color: #444446;
+  --button-primary-bg: #D4AF37;
+  --button-primary-text: #1c1c1e;     /* Dark text on the gold button for high contrast */
 }
 
 /* 2. APPLY THE VARIABLES TO YOUR SITE */
-
 body {
- background-color: var(--bg-color);
- color: var(--text-color);
- font-family: 'Playfair Display', serif; /* A more elegant font for headings */
- padding-top: 70px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Source Sans 3', sans-serif; /* Clean sans-serif for body copy */
+  padding-top: 70px;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out; /* Smooth theme transition */
 }
 
-h1, h2, h3, h4, h5, h6, .article-title {
- font-family: 'Playfair Display', serif;
+/* Use the elegant font for headings */
+h1, h2, h3, h4, h5, h6, .article-title, .navbar-brand {
+  font-family: 'Playfair Display', serif;
 }
 
-p, a, span, .article-content, .article-metadata {
- font-family: 'Source Sans 3', sans-serif; /* A clean sans-serif for body copy */
+.content-section, .card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
 
-.content-section {
- background: var(--card-bg);
- padding: 30px; /* Increased padding for a more spacious feel */
- border: 1px solid var(--border-color);
- border-radius: 8px; /* Slightly more rounded corners */
- margin-bottom: 20px;
- box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Subtle shadow for depth */
+/* Style links with our theme colors */
+a {
+  color: var(--link-color);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+a:hover {
+  color: var(--link-hover-color);
+  text-decoration: underline;
+}
+
+.article-title {
+  color: var(--text-color);
+}
+.article-title:hover {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.article-metadata {
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+.article-metadata, .article-metadata a {
+  color: var(--secondary-text-color);
+}
+
+/* --- THEME THE BUTTONS --- */
+.btn-primary {
+    background-color: var(--button-primary-bg) !important;
+    color: var(--button-primary-text) !important;
+    border-color: var(--button-primary-bg) !important;
+    font-weight: bold;
+}
+.btn-outline-info, .btn-outline-secondary {
+    border-color: var(--link-color) !important;
+    color: var(--link-color) !important;
+}
+.btn-outline-info:hover, .btn-outline-secondary:hover {
+    background-color: var(--link-color) !important;
+    color: var(--button-primary-text) !important;
+}
+
+/* Ensure navbar stays dark and text is readable */
+.navbar-dark {
+  background-color: var(--navbar-bg) !important;
+}
+.card-header.bg-light {
+    background-color: var(--card-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Make form inputs theme-aware */
+.form-control, .form-floating>.form-control {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+.form-control:focus, .form-floating>.form-control:focus {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 0.25rem rgba(var(--link-color), 0.25);
+}
+.form-floating>.form-control:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 30px var(--card-bg) inset !important;
+    -webkit-text-fill-color: var(--text-color) !important;
 }
