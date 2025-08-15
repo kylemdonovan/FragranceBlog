@@ -1,4 +1,6 @@
 # app/context_processors.py
+import os
+
 from app.models import Post, Tag, Subscriber
 from app.forms import SubscriptionForm
 from app import db
@@ -42,8 +44,21 @@ def inject_sidebar_data():
         current_app.logger.error(f"Error fetching popular tags for sidebar: {e}", exc_info=True)
         popular_tags = []
 
+    #START CACHE BUSTING
+    try:
+        # Get the full path to the CSS file
+        css_file_path = os.path.join(current_app.static_folder, 'style.css')
+        # Get the file's last modification time as a simple integer
+        css_version = int(os.path.getmtime(css_file_path))
+    except (OSError, FileNotFoundError):
+        # If file is not found, fallback to a default value (like current time)
+        css_version = int(datetime.utcnow().timestamp())
+    #END CACHE BUSTING
+
     return dict(
         sidebar_recent_posts=recent_posts,
         sidebar_popular_tags=popular_tags,
-        now=datetime.utcnow
+        now=datetime.utcnow,
+        css_version=css_version
+
     )
