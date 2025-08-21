@@ -1,4 +1,3 @@
-{# app/templates/admin/account.html #}
 {% extends "base.html" %}
 
 {% block content %}
@@ -6,16 +5,16 @@
     <h1 class="mb-4">Admin Account Management</h1>
     <div class="row">
         <div class="col-md-8">
+
             {# --- CHANGE PASSWORD FORM --- #}
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header">
                     <h4>Change Password</h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('main.admin_account') }}" novalidate>
-                        {{ password_form.hidden_tag() }} {# CSRF token #}
-                        
-                        {# Current Password Field #}
+                    <form method="POST" action="{{ url_for('main.change_password') }}" novalidate>
+                        {{ password_form.hidden_tag() }}
+
                         <div class="form-floating mb-3">
                             {{ password_form.current_password(class="form-control" + (" is-invalid" if password_form.current_password.errors else ""), placeholder="Current Password") }}
                             {{ password_form.current_password.label(class="form-label") }}
@@ -25,8 +24,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
-                        {# New Password Field #}
+
                         <div class="form-floating mb-3">
                             {{ password_form.new_password(class="form-control" + (" is-invalid" if password_form.new_password.errors else ""), placeholder="New Password") }}
                             {{ password_form.new_password.label(class="form-label") }}
@@ -37,7 +35,6 @@
                             {% endif %}
                         </div>
 
-                        {# Confirm New Password Field #}
                         <div class="form-floating mb-3">
                             {{ password_form.new_password2(class="form-control" + (" is-invalid" if password_form.new_password2.errors else ""), placeholder="Confirm New Password") }}
                             {{ password_form.new_password2.label(class="form-label") }}
@@ -48,15 +45,35 @@
                             {% endif %}
                         </div>
 
-                        <div class="form-group">
-                            {{ password_form.submit(class="btn btn-primary") }}
-                        </div>
+                        {{ password_form.submit(class="btn btn-primary") }}
                     </form>
                 </div>
             </div>
+
+            {# --- CHANGE USERNAME FORM --- #}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h4>Change Username</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.change_username') }}" novalidate>
+                        {{ username_form.hidden_tag() }}
+                        <div class="form-floating mb-3">
+                            {{ username_form.new_username(class="form-control" + (" is-invalid" if username_form.new_username.errors else ""), placeholder="New Username") }}
+                            {{ username_form.new_username.label(class="form-label") }}
+                            {% if username_form.new_username.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in username_form.new_username.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {{ username_form.submit(class="btn btn-primary") }}
+                    </form>
+                </div>
+            </div>
+
         </div>
         <div class="col-md-4">
-            {# You can add other admin info or links here #}
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Account Info</h5>
@@ -64,7 +81,6 @@
                         <strong>Username:</strong> {{ current_user.username }}<br>
                         <strong>Email:</strong> {{ current_user.email }}
                     </p>
-                    {# Add a link to change email later if you build that feature #}
                 </div>
             </div>
         </div>

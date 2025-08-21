@@ -1,21 +1,17 @@
 {% extends "base.html" %}
 
 {% block content %}
-
     {% if tinymce_api_key %}
     <script src="https://cdn.tiny.cloud/1/{{ tinymce_api_key }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
-    {% else %}
-    <!-- TinyMCE API Key not configured - editor may have limited functionality or branding -->
     {% endif %}
 
-    <div class="content-section col-md-10 mx-auto"> {# Added some centering and width limit for larger screens #}
+    <div class="content-section col-md-10 mx-auto">
         <form method="POST" action="" enctype="multipart/form-data" novalidate>
-            {{ form.hidden_tag() }} {# CSRF token #}
+            {{ form.hidden_tag() }}
 
             <fieldset class="form-group">
                 <legend class="border-bottom mb-4">{{ legend }}</legend>
 
-                {# Title Field #}
                 <div class="form-floating mb-3">
                     {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Post Title") }}
                     {{ form.title.label(class="form-label") }}
@@ -26,10 +22,9 @@
                     {% endif %}
                 </div>
 
-                {# Image Field #}
                 <div class="mb-3">
                     {{ form.image.label(class="form-label") }}
-                    {{ form.image(class="form-control form-control-sm" + (" is-invalid" if form.image.errors else "")) }} {# Added form-control-sm #}
+                    {{ form.image(class="form-control form-control-sm" + (" is-invalid" if form.image.errors else "")) }}
                     {% if form.image.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.image.errors %}<span>{{ error }}</span><br>{% endfor %}
@@ -41,19 +36,15 @@
                             <img src="{{ post.image_url.replace('/upload/', '/upload/w_300,h_200,c_fill,q_auto,f_auto/') }}" alt="Current featured image for {{ post.title }}" class="img-thumbnail mb-2" style="max-height: 150px;">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="remove_image" id="remove_image">
-                                <label class="form-check-label" for="remove_image">
-                                    Remove current image
-                                </label>
+                                <label class="form-check-label" for="remove_image">Remove current image</label>
                             </div>
                         </div>
                     {% endif %}
                 </div>
 
-                {# Body Field (for TinyMCE) #}
                 <div class="mb-3">
                     {{ form.body.label(class="form-label") }}
-                    {# WTForms automatically adds id="body" if form.body.id is not set otherwise #}
-                    {{ form.body(class="form-control tinymce-textarea" + (" is-invalid" if form.body.errors else ""), style="min-height: 400px;") }} {# Added class and min-height #}
+                    {{ form.body(class="form-control tinymce-textarea" + (" is-invalid" if form.body.errors else ""), style="min-height: 400px;") }}
                     {% if form.body.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.body.errors %}<span>{{ error }}</span><br>{% endfor %}
@@ -61,99 +52,54 @@
                     {% endif %}
                 </div>
 
-                {# Tags Field #}
                 <div class="mb-3">
                     {{ form.tags.label(class="form-label") }}
                     {{ form.tags(class="form-control" + (" is-invalid" if form.tags.errors else ""), placeholder="e.g., summer, citrus, designer, review") }}
                     {% if form.tags.errors %}
-                        <div class="invalid-feedback d-block"> {# Corrected typo inva900-btlid-feedback -> invalid-feedback #}
+                        <div class="invalid-feedback d-block">
                             {% for error in form.tags.errors %}<span>{{ error }}</span><br>{% endfor %}
                         </div>
                     {% endif %}
                     <small class="form-text text-muted">Enter tags separated by commas.</small>
                 </div>
 
+                <div class="form-check mb-3">
+                    {{ form.status(class="form-check-input") }}
+                    {{ form.status.label(class="form-check-label") }}
+                </div>
             </fieldset>
 
-            <div class="form-group my-4"> {# Added my-4 for spacing #}
-                {{ form.submit(class="btn btn-primary btn-lg") }} {# Changed to btn-primary btn-lg #}
-                <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary btn-lg ms-2">Cancel</a> {# Added ms-2 #}
+            <div class="form-group my-4">
+                {{ form.submit(class="btn btn-primary btn-lg") }}
+                <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary btn-lg ms-2">Cancel</a>
             </div>
         </form>
     </div>
 
-    {# TinyMCE Initialization Script #}
-    {# PUT IN SEPARATE JS FILE LATER FOR OPTIMAL PERFORMANCE better page load performance #}
-
+    {# --- TinyMCE Initialization Script --- #}
     {% if tinymce_api_key %}
     <script>
-      document.addEventListener('DOMContentLoaded', function () { // Ensure DOM is ready
+      document.addEventListener('DOMContentLoaded', function () {
         tinymce.init({
-          selector: 'textarea.tinymce-textarea', // Changed selector to use the class
-          plugins: 'code lists link image media table wordcount preview fullscreen help visualblocks searchreplace anchor charmap insertdatetime', // Added some common useful plugins
+          selector: 'textarea.tinymce-textarea',
+          plugins: 'code lists link image media table wordcount preview fullscreen help visualblocks searchreplace anchor charmap insertdatetime',
           toolbar: 'undo redo | styles | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | ' +
                    'bullist numlist outdent indent | link image media table | ' +
-                   'forecolor backcolor | charmap | code preview fullscreen help | removeformat', // Enhanced toolbar
-          height: 550, // Increased height
-          menubar: 'edit view insert format tools table help', // Keep menubar for power users
-
-          image_advtab: true, // Enables advanced image tab
-          image_title: true, // Allow titles for images
-          automatic_uploads: true, // Allows pasting images (may require more server-side handling if not using tiny drive/cloud)
-          // file_picker_types: 'image', // If you want to enable local file picker for images
-          // file_picker_callback: function (cb, value, meta) { /* ... your custom uploader ... */ },
-
-          // --- START: TinyMCE Sanitization Options ---
-          valid_elements: ''
-              + '@[id|class|style|title|dir<ltr?rtl|lang|xml::lang],' // Global attributes
-              + 'a[rel|rev|charset|hreflang|tabindex|accesskey|type|name|href|target|title|class],'
-              + 'strong/b,em/i,strike,u,sub,sup,'
-              + '#p,-ol[type|compact|start|class],-ul[type|compact|class],-li[class|value],' // Added start for ol, value for li
-              + 'br,img[longdesc|usemap|src|border|alt|title|hspace|vspace|width|height|align|style|class],'
-              + 'blockquote[cite|class],'
-              + '-h1,-h2,-h3,-h4,-h5,-h6,' // Allowing all heading levels
-              + 'hr,pre[class],code[class],'
-              + 'table[summary|width|height|border|align|cellspacing|cellpadding|class|style],'
-              + 'thead,tbody,tfoot,caption[class|style],'
-              + 'tr[align|valign|class|style],'
-              + 'td[align|valign|width|height|colspan|rowspan|scope|class|style],'
-              + 'th[align|valign|width|height|colspan|rowspan|scope|class|style],'
-              + 'span[class|style]',
-
-          // More restrictive style whitelisting (recommended if style attribute is allowed)
-          valid_styles: {
-              '*': 'color,background-color,font-size,font-family,font-weight,font-style,text-decoration,text-align,line-height,padding,margin,border,border-radius,display,float,clear', // Common global styles
-              'p': 'text-indent,margin-top,margin-bottom',
-              'li': 'list-style-type',
-              'img': 'width,height,border,margin-left,margin-right,vertical-align',
-              'table': 'border-collapse,border-spacing,width',
-              'td,th': 'background-color,padding,border,text-align,vertical-align,width'
-          },
-
-          // Example: Forcing target="_blank" and rel="noopener noreferrer" on external links for security/UX
-          // link_default_target: '_blank',
-          // link_default_protocol: 'https',
-          // rel_list: [
-          //     { title: 'None', value: '' },
-          //     { title: 'No Follow', value: 'nofollow' },
-          //     { title: 'No Opener No Referrer', value: 'noopener noreferrer' }
-          // ],
-
-          // Convert <font> tags to <span> with styles (legacy content handling)
-          // convert_fonts_to_spans: true,
-          // --- END: TinyMCE Sanitization Options ---
-
-          // This setup function to trigger save on form submit is good!
+                   'forecolor backcolor | charmap | code preview fullscreen help | removeformat',
+          height: 550,
+          menubar: 'edit view insert format tools table help',
+          image_advtab: true,
+          image_title: true,
+          automatic_uploads: true,
           setup: function (editor) {
             editor.on('init', function () {
-              var form = editor.getElement().form; // Simpler way to get parent form
+              var form = editor.getElement().form;
               if (form) {
                 form.addEventListener('submit', function (e) {
-                  editor.save(); // Ensure editor content is synced to the textarea before submit
-                  // console.log("TinyMCE content saved to textarea before form submission."); // For debugging
+                  editor.save();
                 });
               } else {
-                   console.error("TinyMCE editor's parent form could not be found. Selector: " + editor.settings.selector); // Changed to console.error
+                   console.error("TinyMCE editor's parent form could not be found.");
               }
             });
           }
@@ -161,5 +107,4 @@
       });
     </script>
     {% endif %}
-
 {% endblock %}

@@ -1,63 +1,65 @@
-{# app/templates/contact.html #}
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="content-section">
-        <form method="POST" action="" novalidate> {# Use POST and novalidate #}
-            {{ form.hidden_tag() }} {# CSRF token #}
-            <fieldset class="form-group">
-                <legend class="border-bottom mb-4">Contact Us</legend>
+<div class="content-section">
+    <form method="POST" action="" novalidate>
+        {{ form.hidden_tag() }}
 
-                {# Name Field #}
-                <div class="form-floating mb-3">
-                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Your Name") }}
-                    {{ form.name.label(class="form-label") }}
-                    {% if form.name.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.name.errors %}<span>{{ error }}</span>{% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+        {# --- Invisible Honeypot Field for Spam Prevention --- #}
+        <div class="d-none" style="display:none;" aria-hidden="true">
+            {{ form.honeypot.label }}
+            {{ form.honeypot(class="form-control") }}
+        </div>
 
-                {# Email Field #}
-                <div class="form-floating mb-3">
-                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="Your Email") }}
-                    {{ form.email.label(class="form-label") }}
-                     {% if form.email.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Contact Us</legend>
 
-                {# Subject Field #}
-                <div class="form-floating mb-3">
-                    {{ form.subject(class="form-control" + (" is-invalid" if form.subject.errors else ""), placeholder="Subject") }}
-                    {{ form.subject.label(class="form-label") }}
-                     {% if form.subject.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.subject.errors %}<span>{{ error }}</span>{% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-
-                {# Message Field (Not floating label for better textarea experience) #}
-                 <div class="mb-3">
-                    {{ form.message.label(class="form-label") }}
-                    {{ form.message(class="form-control" + (" is-invalid" if form.message.errors else ""), rows="5", placeholder="Your message here...") }} {# Added rows attribute #}
-                     {% if form.message.errors %}
-                        <div class="invalid-feedback d-block"> {# Use d-block for textarea errors #}
-                            {% for error in form.message.errors %}
-                                <span>{{ error }}</span><br>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-
-            </fieldset>
-            <div class="form-group mb-3">
-                {{ form.submit(class="btn btn-outline-info") }} {# Use standard button #}
+            <div class="form-floating mb-3">
+                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Your Name") }}
+                {{ form.name.label(class="form-label") }}
+                {% if form.name.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.name.errors %}<span>{{ error }}</span>{% endfor %}
+                    </div>
+                {% endif %}
             </div>
-        </form>
-    </div>
+
+            <div class="form-floating mb-3">
+                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="Your Email") }}
+                {{ form.email.label(class="form-label") }}
+                 {% if form.email.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-floating mb-3">
+                {{ form.subject(class="form-control" + (" is-invalid" if form.subject.errors else ""), placeholder="Subject") }}
+                {{ form.subject.label(class="form-label") }}
+                 {% if form.subject.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.subject.errors %}<span>{{ error }}</span>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+             <div class="mb-3">
+                {{ form.message.label(class="form-label") }}
+                {{ form.message(class="form-control" + (" is-invalid" if form.message.errors else ""), rows="5", placeholder="Your message here...") }}
+                 {% if form.message.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.message.errors %}
+                            <span>{{ error }}</span><br>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </fieldset>
+
+        <div class="form-group mb-3">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+</div>
 {% endblock %}

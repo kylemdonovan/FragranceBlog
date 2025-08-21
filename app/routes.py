@@ -14,7 +14,7 @@ from flask import Response, url_for, send_from_directory
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm,
                        ContactForm, RequestPasswordResetForm,
                        ResetPasswordForm, ChangePasswordForm, EditCommentForm,
-                       SubscriptionForm)
+                       SubscriptionForm, ChangeUsernameForm)
 
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
@@ -142,7 +142,8 @@ def index():
     """Displays the homepage with paginated posts."""
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('POSTS_PER_PAGE', 5)
-    query = sa.select(Post).order_by(Post.timestamp.desc())
+    query = sa.select(Post).where(Post.status == True).order_by(
+        Post.published_at.desc())
     pagination = db.paginate(query, page=page, per_page=per_page,
                              error_out=False)
     posts = pagination.items
@@ -162,10 +163,12 @@ def post(slug):
     """Displays a single post by its slug and handles comment submission."""
     post_obj = db.session.scalar(sa.select(Post).filter_by(slug=slug))
 
-    if post_obj is None:
-        flash(f'Post "{slug}" not found.', 'warning')
+    # Checks if the post doesn't exist, OR if draft && visitor isnot admin.
+    if post_obj is None or (not post_obj.status and not (
+            current_user.is_authenticated and current_user.is_admin)):
+        flash('Post not found or is currently a draft.', 'warning')
         current_app.logger.warning(
-            f"Attempt to access non-existent post with slug: {slug}")
+            f"Attempt to access non-existent or draft post with slug: {slug}")
         return redirect(url_for('main.index'))
 
     form = CommentForm()
@@ -252,6 +255,10 @@ def contact():
     """Displays contact form and handles submission by sending an email."""
     form = ContactForm()
     if form.validate_on_submit():
+        if form.honeypot.data:
+            current_app.logger.warning(f"Honeypot field filled by IP: {request.remote_addr}")
+            flash('Your message has been sent successfully! We will get back to you soon.', 'success')
+            return redirect(url_for('main.index'))
         name = form.name.data
         sender_email = form.email.data
         subject_from_form = form.subject.data
@@ -542,7 +549,11 @@ def create_post():
                         author=current_user,
                         slug=new_slug,
                         image_url=image_url,
-                        image_public_id=image_public_id)
+                        image_public_id=image_public_id,
+                        status=form.status.data)
+
+        if post_obj.status:
+            post_obj.published_at = datetime.utcnow()
 
         tag_string = form.tags.data
         if tag_string:
@@ -619,6 +630,15 @@ def edit_post(post_id):
         if post_to_edit.is_modified('title'):
             post_to_edit.slug = Post.generate_unique_slug(post_to_edit.title)
 
+        original_status = post_to_edit.status
+        post_to_edit.status = form.status.data
+        # If the post is being published for the first time
+        if post_to_edit.status and not original_status:
+            post_to_edit.published_at = datetime.utcnow()
+        # If a post is being unpublished, remove its publish date
+        elif not post_to_edit.status:
+            post_to_edit.published_at = None
+
         post_to_edit.tags.clear()
         tag_string = form.tags.data
         if tag_string:
@@ -647,6 +667,7 @@ def edit_post(post_id):
         form.title.data = post_to_edit.title
         form.body.data = post_to_edit.body
         form.tags.data = ', '.join([tag.name for tag in post_to_edit.tags])
+        form.status.data = post_to_edit.status
 
     return render_template('admin/create_edit_post.html', title='Edit Post',
                            form=form,
@@ -666,7 +687,8 @@ def tag(tag_name):
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('TAG_POSTS_PER_PAGE', 5)
     query = sa.select(Post).join(Post.tags).where(
-        Tag.id == tag_obj.id).order_by(Post.timestamp.desc())
+        Tag.id == tag_obj.id, Post.status == True).order_by(
+        Post.published_at.desc())
     pagination = db.paginate(query, page=page, per_page=per_page,
                              error_out=False)
     posts_on_page = pagination.items
@@ -738,7 +760,8 @@ def rss_feed():
     fg.link(href=url_for('main.rss_feed', _external=True), rel='self')
 
     latest_posts = db.session.scalars(
-        sa.select(Post).order_by(Post.timestamp.desc()).limit(
+        sa.select(Post).where(Post.status == True).order_by(
+            Post.published_at.desc()).limit(
             posts_for_feed)).all()
 
     for post_item in latest_posts:
@@ -835,11 +858,12 @@ def search():
     search_term = f"%{query_param}%"
 
     query = sa.select(Post).where(
+        Post.status == True,
         sa.or_(
             Post.title.ilike(search_term),
             Post.body.ilike(search_term)
         )
-    ).order_by(Post.timestamp.desc())
+    ).order_by(Post.published_at.desc())
 
     pagination = db.paginate(query, page=page, per_page=per_page,
                              error_out=False)
@@ -911,36 +935,71 @@ def sitemap():
 
 
 # === ADMIN ACCOUNT MANAGEMENT ROUTE (CORRECTED) ===
-@bp.route('/admin/account', methods=['GET', 'POST'])
-@admin_required  # CORRECTED: Fixed typo from @admin_red
+# This first function just RENDERS the page
+# === ADMIN ACCOUNT MANAGEMENT (REFACTORED) ===
+
+# This first function just RENDERS the page
+@bp.route('/admin/account', methods=['GET'])
+@admin_required
 def admin_account():
-    """Allows an admin to change their own password."""
-    # CORRECTED: Changed AdminChangePasswordForm to ChangePasswordForm
+    """Renders the account management page."""
     password_form = ChangePasswordForm()
+    username_form = ChangeUsernameForm(current_user.username)
+    return render_template('admin/account.html',
+                           title='Admin Account Management',
+                           password_form=password_form,
+                           username_form=username_form)
+
+
+# This second function HANDLES the password change
+@bp.route('/admin/account/change-password', methods=['POST'])
+@admin_required
+def change_password():
+    """Handles password change form submission."""
+    # We need to instantiate both forms in case of a validation error
+    password_form = ChangePasswordForm()
+    username_form = ChangeUsernameForm(current_user.username)
 
     if password_form.validate_on_submit():
         if current_user.check_password(password_form.current_password.data):
             current_user.set_password(password_form.new_password.data)
-            try:
-                db.session.commit()
-                flash(
-                    'Your password has been changed successfully! For security, please log in again.',
-                    'success')
-                logout_user()
-                return redirect(url_for('main.login'))
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(
-                    f"Error changing password for user {current_user.username}: {e}",
-                    exc_info=True)
-                flash(
-                    'An error occurred while changing your password. Please try again.',
-                    'danger')
+            db.session.commit()
+            flash(
+                'Password changed successfully. Please log in again for security.',
+                'success')
+            logout_user()
+            return redirect(url_for('main.login'))
         else:
-            # Use a specific error on the form field for better UX
             password_form.current_password.errors.append(
                 'Incorrect current password.')
 
+    # If validation fails, re-render the main page with the errors
     return render_template('admin/account.html',
                            title='Admin Account Management',
-                           password_form=password_form)
+                           password_form=password_form,
+                           username_form=username_form)
+
+
+# This third function HANDLES the username change
+@bp.route('/admin/account/change-username', methods=['POST'])
+@admin_required
+def change_username():
+    """Handles username change form submission."""
+    # We need to instantiate both forms in case of a validation error
+    username_form = ChangeUsernameForm(current_user.username)
+    password_form = ChangePasswordForm()
+
+    if username_form.validate_on_submit():
+        original_username = current_user.username
+        current_user.username = username_form.new_username.data
+        db.session.commit()
+        flash(
+            f'Username successfully changed from "{original_username}" to "{current_user.username}".',
+            'success')
+        return redirect(url_for('main.admin_account'))
+
+    # If validation fails, re-render the main page with the errors
+    return render_template('admin/account.html',
+                           title='Admin Account Management',
+                           password_form=password_form,
+                           username_form=username_form)

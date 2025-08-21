@@ -3,7 +3,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileSize
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
-from app.models import User
+from app.models import User, Subscriber
 import sqlalchemy as sa
 from app import db
 
@@ -90,6 +90,20 @@ class ChangePasswordForm(FlaskForm): # Was AdminChangePasswordForm
         validators=[DataRequired(), EqualTo('new_password', message='New passwords must match.')]
     )
     submit = SubmitField('Change Password')
+
+class ChangeUsernameForm(FlaskForm):
+    new_username = StringField('New Username', validators=[DataRequired(), Length(min=3, max=64)])
+    submit = SubmitField('Change Username')
+
+    def __init__(self, original_username, *args, **kwargs):
+        super(ChangeUsernameForm, self).__init__(*args, **kwargs)
+        self.original_username = original_username
+
+    def validate_new_username(self, new_username):
+        if new_username.data.lower() == self.original_username.lower():
+            raise ValidationError('New username cannot be the same as the current one.')
+        if db.session.scalar(sa.select(User).where(User.username == new_username.data)):
+            raise ValidationError('That username is already taken. Please choose a different one.')
 
 # === EDIT COMMENT FORM ===
 class EditCommentForm(FlaskForm):

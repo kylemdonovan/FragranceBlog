@@ -1,5 +1,4 @@
 <!doctype html>
-<!-- The `data-bs-theme` will be set by the script below to prevent theme flickering -->
 <html lang="en">
 <head>
     <!-- Required meta tags -->
@@ -7,15 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     {# --- Anti-Flicker Theme Script (Executes First) --- #}
-    {# This script runs immediately to set the theme before the page content is rendered, preventing a flash of the incorrect theme. #}
     <script>
       (() => {
         const getStoredTheme = () => localStorage.getItem('theme');
         const getPreferredTheme = () => {
           const storedTheme = getStoredTheme();
-          if (storedTheme) {
-            return storedTheme;
-          }
+          if (storedTheme) return storedTheme;
           return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         };
         document.documentElement.setAttribute('data-bs-theme', getPreferredTheme());
@@ -35,8 +31,6 @@
 
     {# --- Favicon Links --- #}
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
 
     {% if title %}
         <title>{{ title }} - {{ config.get('BLOG_NAME', 'Fragrance Blog') }}</title>
@@ -68,20 +62,12 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
              <div class="collapse navbar-collapse" id="navbarNav">
-                {# The 'me-auto' class pushes all subsequent navigation items to the right. #}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
-
                 <form class="d-flex my-2 my-lg-0 me-lg-3" method="GET" action="{{ url_for('main.search') }}" role="search">
                   <input class="form-control me-2" type="search" placeholder="Search Posts" aria-label="Search" name="q" value="{{ request.args.get('q', '') }}">
                   <button class="btn btn-outline-light" type="submit">Search</button>
                 </form>
-
-                {# --- Primary User Actions --- #}
                 <ul class="navbar-nav">
-                    {# Contact link is grouped with other user actions for better navbar flow. #}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="{{ url_for('main.contact') }}">Contact</a>
-                    </li>
                      {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
                              <li class="nav-item dropdown">
@@ -89,21 +75,15 @@
                                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminDropdown">
                                   <li><a class="dropdown-item" href="{{ url_for('main.admin_dashboard') }}">Dashboard</a></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.create_post') }}">New Post</a></li>
-                                  <li><a class="dropdown-item" href="{{ url_for('main.register') }}">Register User</a></li>
-                                  <li><hr class="dropdown-divider"></li>
                                   <li><a class="dropdown-item" href="{{ url_for('main.admin_account') }}">My Account</a></li>
                                 </ul>
                               </li>
                         {% endif %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Hi, {{ current_user.username }}!</a>
-                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
-                            </ul>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a></li>
                     {% else %}
-                         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Login</a></li>
-                         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'main.signup' %}active{% endif %}" href="{{ url_for('main.signup') }}">Sign Up</a></li>
+                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Sign In</a>
+                        </li>
                     {% endif %}
                     <li class="nav-item ms-lg-2"><button class="btn btn-outline-light" id="theme-toggler" type="button" aria-label="Toggle theme"></button></li>
                 </ul>
@@ -191,7 +171,9 @@
                 </form>
             </div>
         </div>
-        <p class="text-muted">© {{ now().year }} {{ config.get('BLOG_NAME', 'Fragrance Blog') }}. All Rights Reserved.</p>
+        <p class="text-muted">© {{ now().year }} {{ config.get('BLOG_NAME', 'Fragrance Blog') }}. All Rights Reserved.
+            <a href="{{ url_for('main.contact') }}" class="ms-3">Contact</a>
+        </p>
     </footer>
 
     <!-- Bootstrap Bundle with Popper -->
@@ -202,28 +184,23 @@
       (() => {
         'use strict'
         const themeToggler = document.querySelector('#theme-toggler');
-
         const getStoredTheme = () => localStorage.getItem('theme');
         const setStoredTheme = theme => localStorage.setItem('theme', theme);
-
         const setThemeIcon = () => {
           if (themeToggler) {
             const currentTheme = document.documentElement.getAttribute('data-bs-theme');
             themeToggler.innerHTML = (currentTheme === 'dark') ? '☀️' : '🌙';
           }
         }
-
-        // Set the initial icon as soon as the DOM is ready to ensure it's always present.
         window.addEventListener('DOMContentLoaded', () => {
           setThemeIcon();
-
           if (themeToggler) {
             themeToggler.addEventListener('click', () => {
               const currentTheme = getStoredTheme() || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
               const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
               setStoredTheme(newTheme);
               document.documentElement.setAttribute('data-bs-theme', newTheme);
-              setThemeIcon(); // Update the icon immediately on click
+              setThemeIcon();
             });
           }
         });
