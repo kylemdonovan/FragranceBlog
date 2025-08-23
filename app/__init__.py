@@ -12,10 +12,12 @@ import cloudinary
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail
+from flask_recaptcha import ReCaptcha
 
 # Create extension instances (without app)
 db = SQLAlchemy()
 migrate = Migrate()
+recaptcha = ReCaptcha()
 login = LoginManager()
 csrf = CSRFProtect()
 mail = Mail()
@@ -45,6 +47,7 @@ def create_app(config_class=Config):
     # Initialize extensions with the app
     db.init_app(app)
     migrate.init_app(app, db)  # Pass db for migrations
+    recaptcha.init_app(app)
     login.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
