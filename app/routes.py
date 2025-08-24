@@ -35,6 +35,8 @@ from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
 
+from app import db, recaptcha
+
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
 
@@ -217,8 +219,7 @@ def post(slug):
 
 # === Public User Registration Route ===
 @bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit(lambda: current_app.config.get('SIGNUP_RATE_LIMIT',
-                                              "5 per hour;20 per day"))
+@limiter.limit(lambda: current_app.config.get('SIGNUP_RATE_LIMIT', "5 per hour;20 per day"))
 def signup():
     """Handles public user registration."""
     if current_user.is_authenticated:
@@ -226,30 +227,33 @@ def signup():
 
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = User(
-            username=form.username.data,
-            email=form.email.data,
-            is_admin=False  # CRITICAL: Public signups are NEVER admins.
-        )
-        user.set_password(form.password.data)
-        db.session.add(user)
-        try:
-            db.session.commit()
-            login_user(user)
-            flash('Congratulations, your account has been created!', 'success')
-            return redirect(url_for('main.index'))
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(
-                f"Error creating public user {form.username.data}: {e}",
-                exc_info=True)
-            flash(
-                'Could not create account due to a server error. Please try again.',
-                'danger')
+        if recaptcha.verify():
+            user = User(
+                username=form.username.data,
+                email=form.email.data,
+                is_admin=False
+            )
+            user.set_password(form.password.data)
+            db.session.add(user)
+            try:
+                db.session.commit()
+                login_user(user)
+                flash('Congratulations, your account has been created!', 'success')
+                return redirect(url_for('main.index'))
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(
+                    f"Error creating public user {form.username.data}: {e}",
+                    exc_info=True)
+                flash(
+                    'Could not create account due to a server error. Please try again.',
+                    'danger')
+        else:
+            # The user failed the ReCAPTCHA test.
+            flash('Invalid ReCAPTCHA. Please prove you are not a robot.', 'danger')
+
 
     return render_template('signup.html', title='Sign Up', form=form)
-
-
 @bp.route('/contact', methods=['GET', 'POST'])
 def contact():
     """Displays contact form and handles submission by sending an email."""
