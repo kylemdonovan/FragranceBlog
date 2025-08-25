@@ -336,6 +336,10 @@ def contact():
 
     return render_template('contact.html', title='Contact Us', form=form)
 
+@bp.route('/privacy-policy')
+def privacy_policy():
+    """Displays the privacy policy page."""
+    return render_template('privacy_policy.html', title='Privacy Policy')
 
 # === NEWSLETTER SUBSCRIBE ROUTE ===
 @bp.route('/subscribe', methods=['POST'])

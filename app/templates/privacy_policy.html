@@ -1,0 +1,52 @@
+{# app/templates/privacy_policy.html #}
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <legend class="border-bottom mb-4">Privacy Policy for {{ config.get('BLOG_NAME') }}</legend>
+
+    <p><strong>Last Updated:</strong> {{ now().strftime('%B %d, %Y') }}</p>
+
+    <p>Welcome to {{ config.get('BLOG_NAME') }}. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you as to how we look after your personal data when you visit our website and tell you about your privacy rights.</p>
+
+    <h4 class="mt-4">1. Data We Collect</h4>
+    <p>We collect and process the following data:</p>
+    <ul>
+        <li><strong>Account Information:</strong> When you register for an account, we collect your username, email address, and a hashed version of your password.</li>
+        <li><strong>Comments:</strong> When you leave a comment, we store the content of your comment and link it to your user account.</li>
+        <li><strong>Newsletter Subscription:</strong> If you subscribe to our newsletter, we collect your email address.</li>
+        <li><strong>Contact Form:</strong> When you contact us through our contact form, we collect your name, email address, and the message content in order to respond to your inquiry.</li>
+        <li><strong>Analytics Data:</strong> We use Google Analytics to collect anonymous information about website traffic, such as pages visited and session duration, to help us improve our service. This may involve the use of cookies.</li>
+    </ul>
+
+    <h4 class="mt-4">2. How We Use Your Data</h4>
+    <p>We use your data for the following purposes:</p>
+    <ul>
+        <li>To provide and maintain our service, including allowing you to create an account and leave comments.</li>
+        <li>To manage your newsletter subscription and send you periodic updates if you have opted in.</li>
+        <li>To respond to your inquiries submitted via the contact form.</li>
+        <li>To improve our website by analyzing how it is used.</li>
+    </ul>
+
+    <h4 class="mt-4">3. Data Security</h4>
+    <p>We have put in place appropriate security measures to prevent your personal data from being accidentally lost, used, or accessed in an unauthorized way. We use HTTPS (SSL) to encrypt data transmitted to and from our website. Passwords are never stored in plain text and are securely hashed.</p>
+
+    <h4 class="mt-4">4. Your Data Rights</h4>
+    <p>You have the right to request access to your personal data, and to ask that your personal data be corrected or erased. If you wish to have your account and all associated data (comments, etc.) deleted, please contact us directly.</p>
+
+    <h4 class="mt-4">5. Third-Party Services</h4>
+    <p>We use the following third-party services which may collect data:</p>
+    <ul>
+        <li><strong>Google ReCAPTCHA:</strong> We use this service on our signup forms to prevent spam and abuse. Its use is subject to Google's <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> and <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>.</li>
+        <li><strong>Google Analytics:</strong> As mentioned, we use this for website analytics.</li>
+        <li><strong>Render:</strong> Our website is hosted on Render. You can view their <a href="https://render.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> here.</li>
+        <li><strong>Cloudinary:</strong> We use Cloudinary to store and serve images uploaded to our blog.</li>
+    </ul>
+
+    <h4 class="mt-4">6. Contact Us</h4>
+    <p>If you have any questions about this privacy policy, please use our <a href="{{ url_for('main.contact') }}">contact page</a> to get in touch.</p>
+
+</div>
+{% endblock %}
