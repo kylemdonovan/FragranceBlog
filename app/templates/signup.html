@@ -17,7 +17,7 @@
                     {% endif %}
                 </div>
 
-                <div class="form-floating mb-3">
+                <div class="form-floating mb-3">a
                     {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="Email") }}
                     {{ form.email.label(class="form-label") }}
                      {% if form.email.errors %}
@@ -47,9 +47,9 @@
                     {% endif %}
                 </div>
 
-                {# --- THIS IS THE CORRECTED WAY TO RENDER THE WIDGET --- #}
+
                 <div class="form-group mb-3 d-flex justify-content-center">
-                    {{ recaptcha }}
+                    {{ form.recaptcha }}
                 </div>
 
             </fieldset>

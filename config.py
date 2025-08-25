@@ -26,9 +26,8 @@ class Config:
     CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
 
     # --- RECAPTCHA ---
-    RECAPTCHA_ENABLED = True
-    RECAPTCHA_SITE_KEY = os.environ.get('RECAPTCHA_SITE_KEY')
-    RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY')
+    RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_SITE_KEY')
+    RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_SECRET_KEY')
 
     # --- MAIL ---
     MAIL_SERVER = os.environ.get('MAIL_SERVER')

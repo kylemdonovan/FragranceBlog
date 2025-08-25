@@ -251,25 +251,18 @@ def post(slug):
 @bp.route('/signup', methods=['GET', 'POST'])
 @limiter.limit("5 per hour")
 def signup():
-    """Handles public user registration and sends confirmation email."""
+    """Handles public user registration and validates recaptcha."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        if recaptcha.verify():
-            user = User(
-                username=form.username.data,
-                email=form.email.data,
-                confirmed=False # Start as unconfirmed
-            )
-            user.set_password(form.password.data)
-            db.session.add(user)
-            db.session.commit()
-            send_confirmation_email(user)
-            flash('A confirmation email has been sent. Please check your inbox to complete your registration.', 'success')
-            return redirect(url_for('main.login'))
-        else:
-            flash('Invalid ReCAPTCHA. Please try again.', 'danger')
+        user = User(username=form.username.data, email=form.email.data, confirmed=False)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        send_confirmation_email(user)
+        flash('A confirmation email has been sent. Please check your inbox.', 'success')
+        return redirect(url_for('main.login'))
     return render_template('signup.html', title='Sign Up', form=form)
 
 

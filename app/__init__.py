@@ -10,7 +10,6 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail
-from flask_recaptcha import ReCaptcha
 import cloudinary
 
 # Create extension instances
@@ -19,7 +18,7 @@ migrate = Migrate()
 login = LoginManager()
 csrf = CSRFProtect()
 mail = Mail()
-recaptcha = ReCaptcha()
+
 limiter = Limiter(key_func=get_remote_address,
                   default_limits=["200 per day", "50 per hour"])
 
@@ -27,7 +26,6 @@ limiter = Limiter(key_func=get_remote_address,
 login.login_view = 'main.login'
 login.login_message = 'Please log in to access this page.'
 login.login_message_category = 'info'
-
 
 def create_app(config_class=Config):
     """The application factory."""
@@ -40,7 +38,6 @@ def create_app(config_class=Config):
     login.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
-    recaptcha.init_app(app)
     limiter.init_app(app)
 
     # Configure Cloudinary
@@ -68,7 +65,6 @@ def create_app(config_class=Config):
         from app.context_processors import inject_sidebar_data
         app.context_processor(inject_sidebar_data)
 
-        # --- THIS IS THE NEW, CLEAN SOLUTION ---
         @app.cli.command("init-db")
         def init_db_command():
             """Clears existing data and creates new tables."""
