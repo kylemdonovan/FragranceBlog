@@ -6,7 +6,6 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationE
 from app.models import User, Subscriber
 import sqlalchemy as sa
 from app import db
-from flask_recaptcha import RecaptchaField
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -20,7 +19,6 @@ class RegistrationForm(FlaskForm): # Needed to create the first admin user
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField(
         'Repeat Password', validators=[DataRequired(), EqualTo('password')])
-    recaptcha = RecaptchaField()
     submit = SubmitField('Register')
 
     # Custom validators to ensure username/email aren't already taken

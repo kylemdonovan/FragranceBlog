@@ -47,8 +47,9 @@
                     {% endif %}
                 </div>
 
-                <div class="form-group mb-3">
-                    {{ form.recaptcha }}
+                {# --- THIS IS THE CORRECTED WAY TO RENDER THE WIDGET --- #}
+                <div class="form-group mb-3 d-flex justify-content-center">
+                    {{ recaptcha }}
                 </div>
 
             </fieldset>

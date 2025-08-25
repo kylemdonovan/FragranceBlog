@@ -32,6 +32,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256))  # Good length for modern hashes
     is_admin = db.Column(db.Boolean, default=False)
 
+    confirmed = db.Column(db.Boolean, nullable=False, default=False)
+    confirmed_on = db.Column(db.DateTime, nullable=True)
+
     # Relationships
     posts = db.relationship('Post', backref='author', lazy='dynamic')
     comments = db.relationship('Comment', backref='commenter', lazy='dynamic')  # 'commenter' is a good backref name
