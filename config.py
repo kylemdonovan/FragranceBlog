@@ -11,18 +11,11 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-should-really-change-this'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    if 'DATABASE_URL' in os.environ:
-        # We are in production (e.g., on Render)
-        uri = os.environ.get('DATABASE_URL')
-        if uri.startswith("postgres://"):
-            uri = uri.replace("postgres://", "postgresql://", 1)
-        SQLALCHEMY_DATABASE_URI = uri
-    else:
-        # We are not in production (e.g., local)
-        instance_folder = os.path.join(basedir, 'instance')
-        os.makedirs(instance_folder, exist_ok=True) # Ensure the instance folder exists
-        db_path = os.path.join(instance_folder, 'app.db')
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + db_path
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL',
+                                             'sqlite:///' + os.path.join(
+                                                 basedir, 'instance',
+                                                 'app.db')).replace(
+        "postgres://", "postgresql://", 1)
 
     # --- TINYMCE CONFIG ---
     TINYMCE_API_KEY = os.environ.get('TINYMCE_API_KEY')
@@ -61,3 +54,5 @@ class Config:
     SIDEBAR_RECENT_POSTS_COUNT = 5
     SIDEBAR_POPULAR_TAGS_COUNT = 10
     SIGNUP_RATE_LIMIT = "5 per hour;20 per day"
+
+

@@ -372,10 +372,7 @@ def subscribe():
 
 # === Authentication Routes ===
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit(lambda: current_app.config.get('LOGIN_RATE_LIMIT',
-                                              "5 per minute;100 per day"))
-@bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute; 100 per day")
 def login():
     """Handles user login, now with a check for email confirmation."""
     if current_user.is_authenticated:
