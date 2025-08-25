@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from flask_mail import Message
 
-from app import mail, limiter
+from app import mail, limiter, db, recaptcha
 
 from feedgen.feed import FeedGenerator
 from flask import Response, url_for, send_from_directory
@@ -35,7 +35,6 @@ from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
 
-from app import db, recaptcha
 
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
@@ -59,6 +58,29 @@ def admin_required(f):
 
 
 # --- Helper function to upload to Cloudinary (MODIFIED for public_id) ---
+
+def send_confirmation_email(user):
+    """Generates a confirmation token and sends the email."""
+    token = user.get_reset_password_token()
+    msg = Message(
+        subject=f"[{current_app.config.get('BLOG_NAME')}] Please Confirm Your Email",
+        sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
+        recipients=[user.email]
+    )
+    msg.body = f"""Dear {user.username},
+
+Welcome to {current_app.config.get('BLOG_NAME')}!
+
+To confirm your account and complete your registration, please click the following link:
+{url_for('main.confirm_email', token=token, _external=True)}
+
+If you did not sign up for an account, please ignore this email.
+
+Sincerely,
+The Liquid Blossom Team
+"""
+    mail.send(msg)
+
 def upload_to_cloudinary(file_to_upload):
     """
     Uploads a file to Cloudinary if configured.
@@ -135,6 +157,14 @@ def health_check():
     """
     return "OK", 200
 
+@bp.before_app_request
+def before_request():
+    """Redirects unconfirmed users away from protected pages."""
+    if current_user.is_authenticated \
+            and not current_user.confirmed \
+            and request.blueprint == 'main' \
+            and request.endpoint not in ['main.confirm_email', 'main.resend_confirmation', 'main.logout', 'main.unconfirmed', 'static']:
+        return redirect(url_for('main.unconfirmed'))
 
 # === Public Routes ===
 
@@ -219,41 +249,30 @@ def post(slug):
 
 # === Public User Registration Route ===
 @bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit(lambda: current_app.config.get('SIGNUP_RATE_LIMIT', "5 per hour;20 per day"))
+@limiter.limit("5 per hour")
 def signup():
-    """Handles public user registration."""
+    """Handles public user registration and sends confirmation email."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
-
     form = RegistrationForm()
     if form.validate_on_submit():
         if recaptcha.verify():
             user = User(
                 username=form.username.data,
                 email=form.email.data,
-                is_admin=False
+                confirmed=False # Start as unconfirmed
             )
             user.set_password(form.password.data)
             db.session.add(user)
-            try:
-                db.session.commit()
-                login_user(user)
-                flash('Congratulations, your account has been created!', 'success')
-                return redirect(url_for('main.index'))
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(
-                    f"Error creating public user {form.username.data}: {e}",
-                    exc_info=True)
-                flash(
-                    'Could not create account due to a server error. Please try again.',
-                    'danger')
+            db.session.commit()
+            send_confirmation_email(user)
+            flash('A confirmation email has been sent. Please check your inbox to complete your registration.', 'success')
+            return redirect(url_for('main.login'))
         else:
-            # The user failed the ReCAPTCHA test.
-            flash('Invalid ReCAPTCHA. Please prove you are not a robot.', 'danger')
-
-
+            flash('Invalid ReCAPTCHA. Please try again.', 'danger')
     return render_template('signup.html', title='Sign Up', form=form)
+
+
 @bp.route('/contact', methods=['GET', 'POST'])
 def contact():
     """Displays contact form and handles submission by sending an email."""
@@ -351,8 +370,10 @@ def subscribe():
 @bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit(lambda: current_app.config.get('LOGIN_RATE_LIMIT',
                                               "5 per minute;100 per day"))
+@bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def login():
-    """Handles user login."""
+    """Handles user login, now with a check for email confirmation."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = LoginForm()
@@ -363,14 +384,17 @@ def login():
             flash('Invalid username or password.', 'danger')
             return redirect(url_for('main.login'))
 
+        # --- THIS IS THE NEW CHECK ---
+        if not user.confirmed:
+            flash(
+                'Your account is not yet confirmed. Please check your email for a confirmation link.',
+                'warning')
+            return redirect(url_for('main.login'))
+
         login_user(user, remember=form.remember_me.data)
         next_page = request.args.get('next')
-        if not next_page or urlsplit(next_page).netloc != '':
-            next_page = url_for('main.index')
-        flash('Login successful!', 'success')
-        return redirect(next_page)
+        return redirect(next_page or url_for('main.index'))
     return render_template('login.html', title='Sign In', form=form)
-
 
 @bp.route('/logout')
 @login_required
@@ -379,6 +403,58 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.index'))
+
+
+
+
+@bp.route('/confirm/<token>')
+@login_required
+def confirm_email(token):
+    """Handles the confirmation token from the user's email."""
+    if current_user.confirmed:
+        return redirect(url_for('main.index'))
+
+    #verify_reset_password_token to validate a timed token.
+    user = User.verify_reset_password_token(token)
+
+    # Ensure the token belongs to the currently logged-in user.
+    if user is None or user.id != current_user.id:
+        flash('The confirmation link is invalid or has expired.', 'danger')
+    else:
+        current_user.confirmed = True
+        current_user.confirmed_on = datetime.utcnow()
+        db.session.commit()
+        flash('You have successfully confirmed your account! Thanks!',
+              'success')
+    return redirect(url_for('main.index'))
+
+
+@bp.route('/unconfirmed')
+@login_required
+def unconfirmed():
+    """Page shown to logged-in but unconfirmed users."""
+    if current_user.confirmed:
+        return redirect(url_for('main.index'))
+    return render_template('unconfirmed.html', title='Confirm Your Account')
+
+
+@bp.route('/resend_confirmation')
+@login_required
+def resend_confirmation():
+    """Route to resend the confirmation email."""
+    if current_user.confirmed:
+        return redirect(url_for('main.index'))
+    try:
+        send_confirmation_email(current_user)
+        flash('A new confirmation email has been sent to your email address.',
+              'success')
+    except Exception as e:
+        current_app.logger.error(
+            f"Error resending confirmation for {current_user.email}: {e}",
+            exc_info=True)
+        flash('There was an error sending the email. Please try again later.',
+              'danger')
+    return redirect(url_for('main.unconfirmed'))
 
 
 # --- Password Reset Helper Function ---
