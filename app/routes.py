@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from flask_mail import Message
 
-from app import mail, limiter, db, recaptcha
+from app import mail, limiter, db
 
 from feedgen.feed import FeedGenerator
 from flask import Response, url_for, send_from_directory
