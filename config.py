@@ -40,11 +40,15 @@ class Config:
     ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL')
 
     # --- COOKIES ---
-    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
+    # These settings are hardcoded to True because the application should
+    # only ever be run over HTTPS in production :) .
+    SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    REMEMBER_COOKIE_SECURE = os.environ.get('REMEMBER_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
+
+    REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_HTTPONLY = True
+    # REMEMBER_COOKIE_SAMESITE is not a standard Flask config, but does no harm.
     REMEMBER_COOKIE_SAMESITE = 'Lax'
 
     # --- APP SPECIFIC SETTINGS ---
