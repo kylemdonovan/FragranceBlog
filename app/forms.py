@@ -46,6 +46,7 @@ class PostForm(FlaskForm):
     ])
     
     tags = StringField('Tags (comma-separated, optional)', validators = [Length(max=1000)])
+    status = BooleanField('Publish this post immediately', default='checked')
     
     submit = SubmitField('Publish Post')
 

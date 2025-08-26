@@ -35,30 +35,38 @@ def test_successful_signup(client, app):
         assert user is not None
         assert user.username == 'testuser'
 
+
+# in tests/test_auth.py
 def test_login_and_logout(client, app):
     """
     GIVEN a confirmed user
     WHEN the '/login' page is posted to with valid credentials
     THEN check that the login is successful and logout works
     """
-    # First, create a confirmed user to log in with
+    # Use the app context to create the user, ensuring it's available for the login request
     with app.app_context():
-        user = User(username='confirmeduser', email='confirmed@example.com', confirmed=True)
+        # Create a user that is already confirmed
+        user = User(username='confirmeduser', email='confirmed@example.com',
+                    confirmed=True)
         user.set_password('password123')
         db.session.add(user)
         db.session.commit()
 
-    # Test Login
+    # Now, outside the context, simulate the user logging in
     response = client.post('/login', data={
         'username': 'confirmeduser',
         'password': 'password123'
     }, follow_redirects=True)
+
+    # Assertions for successful login
     assert response.status_code == 200
-    assert b"Hi, confirmeduser!" in response.data
-    assert b"Logout" in response.data
+    assert b'Hi, confirmeduser!' in response.data
+    assert b'Logout' in response.data
+    assert b'Sign In' not in response.data  # Make sure Sign In link is gone
 
     # Test Logout
     response = client.get('/logout', follow_redirects=True)
     assert response.status_code == 200
-    assert b"You have been logged out." in response.data
-    assert b"Sign In" in response.data
+    assert b'You have been logged out.' in response.data
+    assert b'Sign In' in response.data
+    assert b'Hi, confirmeduser!' not in response.data
