@@ -1,7 +1,9 @@
 # tests/conftest.py
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from app.models import User
 
 import pytest
 from app import create_app, db
@@ -40,3 +42,23 @@ def _db(app):
         yield db
         db.session.remove()
         db.drop_all()
+
+@pytest.fixture
+def auth_client(client, app):
+    """
+    Provides a test client that is already logged in as a confirmed user.
+    """
+    with app.app_context():
+        user = User(username='testuser', email='test@example.com',
+                    confirmed=True)
+        user.set_password('password')
+        db.session.add(user)
+        db.session.commit()
+
+    client.post('/login', data={'username': 'testuser', 'password': 'password'},
+                follow_redirects=True)
+
+    yield client  # The test will run with this client
+
+    # Logout after the test is done to clean up
+    client.get('/logout', follow_redirects=True)
