@@ -1,5 +1,5 @@
 # tests/test_auth.py
-from app.models import User
+from app.models import User, db
 
 def test_signup_page_loads(client):
     """Tests that the signup page loads correctly."""

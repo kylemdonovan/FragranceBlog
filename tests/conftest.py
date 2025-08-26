@@ -36,3 +36,18 @@ def app():
 def client(app):
     """A test client for the app."""
     return app.test_client()
+
+
+class TestConfig(Config):
+    """Configuration for testing, inherits from the main Config."""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+    RECAPTCHA_ENABLED = False
+    SERVER_NAME = "localhost.localdomain"
+
+    # Provide dummy mail settings for tests that send emails
+    MAIL_SERVER = 'localhost'
+    MAIL_PORT = 25
+    MAIL_DEFAULT_SENDER = 'test@example.com'
+

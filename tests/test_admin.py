@@ -1,5 +1,6 @@
 # tests/test_admin.py
-from app.models import User, Post
+from app.models import User, Post, db
+
 
 
 def test_admin_can_access_dashboard(client, app):
