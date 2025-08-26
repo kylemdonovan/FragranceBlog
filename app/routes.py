@@ -1,16 +1,9 @@
-# app/routes.py
-# FINAL CORRECTED Comprehensive version with Slugs, RTE Key, and Cloudinary Image Uploads
-
 from flask import make_response
 from datetime import datetime, timezone
-
 from flask_mail import Message
-
 from app import mail, limiter, db
-
 from feedgen.feed import FeedGenerator
-from flask import Response, url_for, send_from_directory
-# CORRECTED: Ensured ChangePasswordForm is imported, not the non-existent AdminChangePasswordForm
+from flask import Response, send_from_directory
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm,
                        ContactForm, RequestPasswordResetForm,
                        ResetPasswordForm, ChangePasswordForm, EditCommentForm,
@@ -35,7 +28,6 @@ import cloudinary.uploader
 
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
-
 
 # === Helper Functions ===
 
@@ -368,21 +360,24 @@ def subscribe():
 
 
 # === Authentication Routes ===
+
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute; 100 per day")
+@limiter.limit("5 per minute")
 def login():
     """Handles user login, now with a check for email confirmation."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+
     form = LoginForm()
     if form.validate_on_submit():
         user = db.session.scalar(
-            sa.select(User).where(User.username == form.username.data))
+            sa.select(User).where(User.username == form.username.data)
+        )
+
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password.', 'danger')
             return redirect(url_for('main.login'))
 
-        # --- THIS IS THE NEW CHECK ---
         if not user.confirmed:
             flash(
                 'Your account is not yet confirmed. Please check your email for a confirmation link.',
@@ -391,8 +386,11 @@ def login():
 
         login_user(user, remember=form.remember_me.data)
         next_page = request.args.get('next')
+        flash('Login successful!', 'success')
         return redirect(next_page or url_for('main.index'))
+
     return render_template('login.html', title='Sign In', form=form)
+
 
 @bp.route('/logout')
 @login_required
@@ -401,9 +399,6 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.index'))
-
-
-
 
 @bp.route('/confirm/<token>')
 @login_required
