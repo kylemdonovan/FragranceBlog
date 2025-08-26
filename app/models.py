@@ -47,30 +47,26 @@ class User(UserMixin, db.Model):
             return False
         return check_password_hash(self.password_hash, password)
 
-    # --- <<< PASSWORD RESET TOKEN METHODS >>> ---
-    def get_reset_password_token(self, expires_sec=None):  # Allow expires_sec to be configured
-        """Generates a secure token for password reset."""
-        if expires_sec is None:
-            expires_sec = current_app.config.get('PASSWORD_RESET_EXPIRES_SEC', 1800)  # Default 30 mins
-        s = Serializer(current_app.config['SECRET_KEY'])
+
+
+    # --- Token Generation & Verification ---
+
+    def get_reset_password_token(self, expires_sec=1800):
+        """Generates a secure, timed token for password reset or email confirmation."""
+        s = Serializer(current_app.config['SECRET_KEY'], salt='password-reset-salt')
         return s.dumps({'user_id': self.id})
 
     @staticmethod
-    def verify_reset_password_token(token, expires_sec=None):
-        """Verifies the reset token and returns the User if valid."""
-        if expires_sec is None:
-            expires_sec = current_app.config.get('PASSWORD_RESET_EXPIRES_SEC', 1800)
-        s = Serializer(current_app.config['SECRET_KEY'])
+    def verify_reset_password_token(token, expires_sec=1800):
+        """Verifies a token and returns the User if valid."""
+        s = Serializer(current_app.config['SECRET_KEY'], salt='password-reset-salt')
         try:
             data = s.loads(token, max_age=expires_sec)
-            user_id = data.get('user_id')
-        except Exception as e:
-            current_app.logger.warning(
-                f"Password reset token verification failed for token '{token[:20]}...': {e}")  # Log token snippet for easier trace
+        except Exception:
+            # This handles bad signatures, expired tokens, etc.
             return None
+        user_id = data.get('user_id')
         return db.session.get(User, user_id)
-
-    # --- <<< END PASSWORD RESET TOKEN METHODS >>> ---
 
     def __repr__(self):
         return f'<User {self.username}>'
