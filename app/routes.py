@@ -21,13 +21,10 @@ from flask import (render_template, flash, redirect, url_for, request,
                    Blueprint, current_app)
 from flask_login import login_user, logout_user, current_user, login_required
 import sqlalchemy as sa
-from urllib.parse import urlsplit
 from functools import wraps
-import os
 import re
 
 # --- App Specific Imports ---
-from app import db
 from app.models import User, Post, Comment, Tag, Subscriber
 
 # --- Image Handling Imports ---
@@ -248,15 +245,22 @@ def post(slug):
 
 
 # === Public User Registration Route ===
+
 @bp.route('/signup', methods=['GET', 'POST'])
 @limiter.limit("5 per hour")
 def signup():
-    """Handles public user registration and validates recaptcha."""
+    """Handles public user registration and sends confirmation email."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RegistrationForm()
+    # 'form.validate_on_submit()' now handles the ReCaptcha check automatically.
     if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data, confirmed=False)
+        user = User(
+            username=form.username.data,
+            email=form.email.data,
+            is_admin=False, # This is a righteous default
+            confirmed=False
+        )
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()

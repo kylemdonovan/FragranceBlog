@@ -36,13 +36,15 @@ def test_successful_signup(client, app):
         assert user.username == 'testuser'
 
 
+# in tests/test_auth.py
+
 def test_login_and_logout(client, app):
     """
     GIVEN a confirmed user
     WHEN they log in and log out
     THEN check that the session is modified correctly
     """
-    # Use the app context to create the user
+    # Create the user within the app context
     with app.app_context():
         user = User(username='confirmeduser', email='confirmed@example.com',
                     confirmed=True)
@@ -50,24 +52,25 @@ def test_login_and_logout(client, app):
         db.session.add(user)
         db.session.commit()
 
-    # The 'with client' block correctly manages the session and cookies
-    with client:
-        # Test Login
-        response = client.post('/login', data={
-            'username': 'confirmeduser',
-            'password': 'password123'
-        }, follow_redirects=True)
+    # Test Login
+    # We will make the login request and store the response
+    login_response = client.post('/login', data={
+        'username': 'confirmeduser',
+        'password': 'password123'
+    }, follow_redirects=True)
 
-        assert response.status_code == 200
-        assert b'Hi, confirmeduser!' in response.data
-        assert b'Logout' in response.data
+    # First, assert that the login itself was successful
+    assert login_response.status_code == 200
+    assert b'Login successful!' in login_response.data
 
-        # Test that a subsequent request is still logged in
-        response = client.get('/')
-        assert b'Hi, confirmeduser!' in response.data
+    # NOW, make a new, separate request to the homepage to check the navbar
+    homepage_response = client.get('/')
+    assert homepage_response.status_code == 200
+    assert b'Hi, confirmeduser!' in homepage_response.data
+    assert b'Logout' in homepage_response.data
 
-        # Test Logout
-        response = client.get('/logout', follow_redirects=True)
-        assert response.status_code == 200
-        assert b'You have been logged out.' in response.data
-        assert b'Hi, confirmeduser!' not in response.data
+    # Test Logout
+    logout_response = client.get('/logout', follow_redirects=True)
+    assert logout_response.status_code == 200
+    assert b'You have been logged out.' in logout_response.data
+    assert b'Hi, confirmeduser!' not in logout_response.data
