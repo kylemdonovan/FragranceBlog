@@ -2,6 +2,8 @@
 import os
 import click
 from flask import Flask
+
+from app.models import User
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate

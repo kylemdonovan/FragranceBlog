@@ -1,11 +1,11 @@
 # app/models.py
-from datetime import datetime, timezone  # Use timezone-aware datetime
+from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from app import db, login  # Import db and login from app package __init__
+from app import db, login
 from slugify import slugify as default_slugify
 import sqlalchemy as sa
-from itsdangerous import URLSafeTimedSerializer as Serializer  # Corrected class name from previous (if any)
+from itsdangerous import URLSafeTimedSerializer as Serializer
 from flask import current_app
 
 # -- Association Table ---
@@ -37,20 +37,19 @@ class User(UserMixin, db.Model):
 
     # Relationships
     posts = db.relationship('Post', backref='author', lazy='dynamic')
-    comments = db.relationship('Comment', backref='commenter', lazy='dynamic')  # 'commenter' is a good backref name
+    comments = db.relationship('Comment', backref='commenter', lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        if self.password_hash is None:  # Handle cases where password_hash might not be set
+        if self.password_hash is None:
             return False
         return check_password_hash(self.password_hash, password)
 
 
 
     # --- Token Generation & Verification ---
-
     def get_reset_password_token(self, expires_sec=1800):
         """Generates a secure, timed token for password reset or email confirmation."""
         s = Serializer(current_app.config['SECRET_KEY'], salt='password-reset-salt')
@@ -76,8 +75,6 @@ class User(UserMixin, db.Model):
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, index=True, nullable=False)
-
-    # posts = db.relationship('Post', secondary=post_tags, back_populates='tags', lazy='dynamic') # If using back_populates
 
     def __repr__(self):
         return f'<Tag {self.name}>'
@@ -105,11 +102,11 @@ class Post(db.Model):
                            backref=db.backref('posts', lazy='dynamic'))
 
     @staticmethod
-    def generate_unique_slug(title_to_slugify):  # Renamed parameter for clarity
+    def generate_unique_slug(title_to_slugify):
         """Generates a unique slug from a title, appending a counter if needed."""
         base_slug = default_slugify(title_to_slugify)
-        if not base_slug:  # Handle empty titles or titles that slugify to empty strings
-            base_slug = "post"  # Default slug base
+        if not base_slug:
+            base_slug = "post"
 
         slug_candidate = base_slug
         counter = 1
@@ -132,7 +129,7 @@ class Comment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
 
     def __repr__(self):
-        return f'<Comment {self.id} by User {self.user_id} on Post {self.post_id}>'  # More descriptive repr
+        return f'<Comment {self.id} by User {self.user_id} on Post {self.post_id}>'
 
 # === SUBSCRIBER MODEL FOR NEWSLETTER ===
 class Subscriber(db.Model):
