@@ -80,7 +80,6 @@
                               </li>
                         {% endif %}
 
-    {# --- THIS IS THE NEW PART --- #}
     <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Hi, {{ current_user.username }}!
@@ -89,7 +88,6 @@
             <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
         </ul>
     </li>
-    {# --- END OF NEW PART --- #}
 
 {% else %}
                          <li class="nav-item">
