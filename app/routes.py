@@ -147,37 +147,6 @@ def health_check():
     return "OK", 200
 
 
-
-# === TEMPORARY BACKDOOR. DELETE IT AFTER, KYLE ===
-@bp.route('/werfjier8gjtjn32ckjljwe959xckjvdlxjQ#EGIvgerrtgjere')
-def create_first_admin():
-    """
-    Creates the initial admin user.
-    THIS IS A TEMPORARY ROUTE AND MUST BE DELETED AFTER USE.
-    """
-    # Check if an admin already exists to prevent this from running twice
-    if db.session.scalar(sa.select(User).where(User.is_admin == True)):
-        return "An admin user already exists. This backdoor is now disabled.", 403
-
-
-    admin_username = "YourAdminUsername"
-    admin_email = "your-email@example.com"
-    admin_password = "YourSuperSecurePassword123!"
-
-    admin = User(
-        username=admin_username,
-        email=admin_email,
-        is_admin=True,
-        confirmed=True # Admins are confirmed by default
-    )
-    admin.set_password(admin_password)
-    db.session.add(admin)
-    db.session.commit()
-
-    return f"<h1>Righteous.</h1><p>Admin user '{admin_username}' has been created. You can now log in. DELETE THIS ROUTE FROM routes.py IMMEDIATELY KYLEEEEEEE.</p>"
-
-# === END OF TEMPORARY BACKDOOR KYLE DELETE MEEEE===
-
 @bp.before_app_request
 def before_request():
     """Redirects unconfirmed users away from protected pages."""
