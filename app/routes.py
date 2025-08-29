@@ -164,7 +164,8 @@ def index():
     """Displays the homepage with paginated posts."""
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('POSTS_PER_PAGE', 5)
-    query = sa.select(Post).where(Post.status == True).order_by(
+    query = sa.select(Post).where(Post.status == True,
+                                  Post.published_at != None).order_by(
         Post.published_at.desc())
     pagination = db.paginate(query, page=page, per_page=per_page,
                              error_out=False)
@@ -760,8 +761,9 @@ def tag(tag_name):
 
     page = request.args.get('page', 1, type=int)
     per_page = current_app.config.get('TAG_POSTS_PER_PAGE', 5)
-    query = sa.select(Post).join(Post.tags).where(
-        Tag.id == tag_obj.id, Post.status == True).order_by(
+    query = sa.select(Post).join(Post.tags).where(Tag.id == tag_obj.id,
+                                                  Post.status == True,
+                                                  Post.published_at != None).order_by(
         Post.published_at.desc())
     pagination = db.paginate(query, page=page, per_page=per_page,
                              error_out=False)
@@ -833,10 +835,10 @@ def rss_feed():
     fg.author({'name': blog_author_name, 'email': blog_author_email})
     fg.link(href=url_for('main.rss_feed', _external=True), rel='self')
 
-    latest_posts = db.session.scalars(
-        sa.select(Post).where(Post.status == True).order_by(
-            Post.published_at.desc()).limit(
-            posts_for_feed)).all()
+    latest_posts = db.session.scalars(sa.select(Post).where(Post.status == True,
+                                                            Post.published_at != None).order_by(
+        Post.published_at.desc()).limit(20)).all()
+
 
     for post_item in latest_posts:
         fe = fg.add_entry()
