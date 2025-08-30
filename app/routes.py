@@ -923,9 +923,7 @@ def search():
     """Handles post search queries, preventing empty searches."""
     query_param = request.args.get('q', '', type=str).strip()
 
-    # --- FIX: Prevent search on empty string ---
     if not query_param:
-        # Don't flash a message, just show the empty page. Flashing can be annoying if the user just clicks the button.
         return render_template('search_results.html', title="Search", query='',
                                posts=[], pagination=None)
 
