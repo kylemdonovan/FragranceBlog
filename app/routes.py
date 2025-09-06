@@ -1078,7 +1078,7 @@ def change_username():
                            password_form=password_form,
                            username_form=username_form)
 
-# === THIS IS A TEMPORARY DIAGNOSTIC ROUTE ===
+# === THIS IS THE TEMPORARY DIAGNOSTIC ROUTE ===
 @bp.route('/db-test')
 def db_test():
     """
@@ -1087,6 +1087,7 @@ def db_test():
     try:
         user_count = db.session.query(User).count()
         return f"<h1>Connection Success!</h1><p>Found {user_count} users in the database.</p>"
+    except Exception as e:
         current_app.logger.error(f"DATABASE CONNECTION FAILED: {e}", exc_info=True)
         return f"<h1>Connection FAILED.</h1><p>Error: {e}</p>", 500
 # === END OF DIAGNOSTIC ROUTE ===
