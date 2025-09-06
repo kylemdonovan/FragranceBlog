@@ -10,12 +10,9 @@ from flask import current_app
 
 # -- Association Table for Posts and Tags ---
 post_tags = db.Table('post_tags',
-                     db.Column('post_id', db.Integer, db.ForeignKey('post.id'),
-                               primary_key=True),
-                     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'),
-                               primary_key=True)
-                     )
-
+    db.Column('post_id', db.Integer, db.ForeignKey('posts.id'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tags.id'), primary_key=True)
+)
 
 # --- Flask-Login User Loader ---
 @login.user_loader
