@@ -1078,9 +1078,3 @@ def change_username():
                            password_form=password_form,
                            username_form=username_form)
 
-@bp.route('/45gfkv34oiiykzlkrr')
-def create_first_admin():
-
-    admin_username = "Kyle"
-    admin_email = "theliquidblossom.com"
-    admin_password = "hackersnohacking"
