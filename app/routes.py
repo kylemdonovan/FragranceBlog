@@ -1077,4 +1077,3 @@ def change_username():
                            title='Admin Account Management',
                            password_form=password_form,
                            username_form=username_form)
-
