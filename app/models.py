@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from app import db, login  # This import is correct
+from .extensions import db, login
 from slugify import slugify as default_slugify
 import sqlalchemy as sa
 from itsdangerous import URLSafeTimedSerializer as Serializer
