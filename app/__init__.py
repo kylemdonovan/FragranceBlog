@@ -1,12 +1,20 @@
+import os
 from flask import Flask
 from config import Config
 from .extensions import db, migrate, login, csrf, mail, limiter
 import cloudinary
 
+from .context_processors import inject_sidebar_data
+
 def create_app(config_class=Config):
     """The application factory."""
-    app = Flask(__name__)
+    app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
+
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
 
     # Initialize extensions with the app
     db.init_app(app)

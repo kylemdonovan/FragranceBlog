@@ -1,21 +1,20 @@
-# config.py
 import os
 from dotenv import load_dotenv
 
-
 basedir = os.path.abspath(os.path.dirname(__file__))
+local_db_path = os.path.join(r"C:\Users\kd2kr\Desktop\fragranceblog",
+                             'instance', 'app.db')
 load_dotenv(os.path.join(basedir, '.env'))
+
 
 class Config:
     # --- CORE SETTINGS ---
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-should-really-change-this'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL',
-                                             'sqlite:///' + os.path.join(
-                                                 basedir, 'instance',
-                                                 'app.db')).replace(
-        "postgres://", "postgresql://", 1)
+    # This line safely uses the Render Postgres DB in production OR your local absolute path.
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+                              'sqlite:///' + local_db_path
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # --- TINYMCE CONFIG ---
     TINYMCE_API_KEY = os.environ.get('TINYMCE_API_KEY')

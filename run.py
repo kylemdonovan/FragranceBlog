@@ -10,13 +10,16 @@ migrate = Migrate(app, db) # Initialize Flask-Migrate here
 # This runs `flask shell` and have db, models, app available
 # This will effectively use the shell context defined in app/__init__.py
 
-
-
-
-
-
-
-
+@app.cli.command("init-db")
+def init_db_command():
+    """Destroys and creates the database tables."""
+    print("Connecting to database and creating all tables...")
+    try:
+        db.drop_all() # Optional: Drops all tables first to ensure a clean slate
+        db.create_all()
+        print("\nSUCCESS: All database tables have been created!")
+    except Exception as e:
+        print(f"\nAN ERROR OCCURRED: {e}")
 
 # This run.py is mainly for Gunicorn and the `if __name__ == '__main__':` block.
 
