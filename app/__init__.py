@@ -33,6 +33,8 @@ def create_app(config_class=Config):
             secure=True
         )
 
+    app.context_processor(inject_sidebar_data)
+
     with app.app_context():
         # Import and register blueprints
         from . import routes
