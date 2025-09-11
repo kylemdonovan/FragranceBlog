@@ -13,6 +13,7 @@
   --button-primary-bg: #8B4513;
   --button-primary-text: #ffffff;
   --navbar-bg: #212529;               /* Keep the navbar consistently dark */
+  --text-color-light: #f8f9fa;
 }
 
 [data-bs-theme="dark"] {
@@ -119,4 +120,29 @@ a:hover {
 .form-floating>.form-control:-webkit-autofill {
     -webkit-box-shadow: 0 0 0 30px var(--card-bg) inset !important;
     -webkit-text-fill-color: var(--text-color) !important;
+}
+
+/* app/static/style.css */
+
+/* --- COOKIE CONSENT BANNER STYLES --- */
+.cookie-consent-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--navbar-bg, #212529); /* Use navbar color as a fallback */
+    color: var(--text-color-light, #f8f9fa);
+    padding: 1rem;
+    z-index: 1050; /* High z-index to appear above other content */
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+}
+
+.cookie-consent-banner p {
+    font-size: 0.9rem;
+    margin-right: 1rem;
+}
+
+.cookie-consent-banner a {
+    color: var(--link-color, #D4AF37);
+    text-decoration: underline;
 }

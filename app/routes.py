@@ -1078,16 +1078,15 @@ def change_username():
                            password_form=password_form,
                            username_form=username_form)
 
-# === THIS IS THE TEMPORARY DIAGNOSTIC ROUTE ===
-@bp.route('/db-test')
-def db_test():
-    """
-    A simple route to test the database connection.
-    """
-    try:
-        user_count = db.session.query(User).count()
-        return f"<h1>Connection Success!</h1><p>Found {user_count} users in the database.</p>"
-    except Exception as e:
-        current_app.logger.error(f"DATABASE CONNECTION FAILED: {e}", exc_info=True)
-        return f"<h1>Connection FAILED.</h1><p>Error: {e}</p>", 500
-# === END OF DIAGNOSTIC ROUTE ===
+
+# === COOKIE CONSENT ROUTE ===
+@bp.route('/set-cookie-consent', methods=['POST'])
+def set_cookie_consent():
+    """Sets a cookie to remember the user's consent choice."""
+    consent = request.json.get('consent', 'false')
+    response = make_response(jsonify(success=True))
+
+    # Set a cookie that expires in 1 year (31536000 seconds)
+    response.set_cookie('cookie_consent', consent, max_age=31536000,
+                        samesite='Lax')
+    return response

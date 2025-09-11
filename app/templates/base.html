@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
+    <meta charset="utf-t">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {# --- Anti-Flicker Theme Script (Executes First) --- #}
     <script>
@@ -18,10 +19,8 @@
       })();
     </script>
 
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Sans+3:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
@@ -41,18 +40,42 @@
     {# --- RSS Feed Link --- #}
     <link rel="alternate" type="application/rss+xml" title="{{ config.get('BLOG_NAME', 'Fragrance Blog') }} RSS Feed" href="{{ url_for('main.rss_feed', _external=True) }}">
 
-    {# --- Google Analytics Script --- #}
-    {% if config.get('GOOGLE_ANALYTICS_ID') %}
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ config.get('GOOGLE_ANALYTICS_ID') }}"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', '{{ config.get('GOOGLE_ANALYTICS_ID') }}');
-    </script>
+    {# --- Google Analytics Script (Conditionally Loaded) --- #}
+    {% if request.cookies.get('cookie_consent') == 'true' %}
+        {% if config.get('GOOGLE_ANALYTICS_ID') %}
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ config.get('GOOGLE_ANALYTICS_ID') }}"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '{{ config.get('GOOGLE_ANALYTICS_ID') }}');
+        </script>
+        {% endif %}
     {% endif %}
 
-</head>
+    <style>
+      .cookie-consent-banner {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background-color: var(--navbar-bg, #212529);
+          color: var(--text-color-light, #f8f9fa);
+          padding: 1rem;
+          z-index: 1050;
+          box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+      }
+      .cookie-consent-banner p {
+          font-size: 0.9rem;
+          margin-right: 1rem;
+          margin-bottom: 0;
+      }
+      .cookie-consent-banner a {
+          color: var(--link-color, #D4AF37);
+          text-decoration: underline;
+      }
+    </style>
+    </head>
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm fixed-top">
@@ -80,16 +103,16 @@
                               </li>
                         {% endif %}
 
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Hi, {{ current_user.username }}!
-        </a>
-        <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
-            <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
-        </ul>
-    </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Hi, {{ current_user.username }}!
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
+                            </ul>
+                        </li>
 
-{% else %}
+                    {% else %}
                          <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'main.login' %}active{% endif %}" href="{{ url_for('main.login') }}">Sign In</a>
                         </li>
@@ -165,6 +188,18 @@
         </div>
     </main>
 
+    <div id="cookie-consent-banner" class="cookie-consent-banner" style="display: none;">
+        <div class="container d-flex justify-content-between align-items-center flex-wrap">
+            <p class="flex-grow-1">
+                We use cookies to enhance your experience and analyze site traffic. By clicking "Accept," you agree to our use of cookies.
+                <a href="{{ url_for('main.privacy_policy') }}">Learn more</a>.
+            </p>
+            <div class="flex-shrink-0">
+                <button id="btn-cookie-decline" class="btn btn-sm btn-outline-light">Decline</button>
+                <button id="btn-cookie-accept" class="btn btn-sm btn-primary ms-2">Accept</button>
+            </div>
+        </div>
+    </div>
     <footer class="container mt-5 py-3 border-top text-center">
         <div class="row justify-content-center mb-4">
             <div class="col-md-6">
@@ -186,12 +221,12 @@
         </p>
     </footer>
 
-    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 
-    {# --- Theme Toggler Logic (Executes After DOM Load) --- #}
+    {# --- Theme Toggler Logic --- #}
     <script>
       (() => {
+        // ... your existing theme toggler script ...
         'use strict'
         const themeToggler = document.querySelector('#theme-toggler');
         const getStoredTheme = () => localStorage.getItem('theme');
@@ -216,5 +251,51 @@
         });
       })()
     </script>
-</body>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        'use strict';
+
+        const banner = document.getElementById('cookie-consent-banner');
+        const acceptBtn = document.getElementById('btn-cookie-accept');
+        const declineBtn = document.getElementById('btn-cookie-decline');
+
+        const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        };
+
+        if (!getCookie('cookie_consent')) {
+            banner.style.display = 'block';
+        }
+
+        const setConsent = (consent) => {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            fetch('/set-cookie-consent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ consent: consent.toString() })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error('Failed to set cookie consent.');
+                }
+                banner.style.display = 'none';
+                if (consent === true) {
+                    location.reload();
+                }
+            })
+            .catch(error => console.error('Error setting cookie consent:', error));
+        };
+
+        acceptBtn.addEventListener('click', () => setConsent(true));
+        declineBtn.addEventListener('click', () => setConsent(false));
+    });
+    </script>
+    </body>
 </html>
