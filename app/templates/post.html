@@ -22,6 +22,22 @@
                  {% endif %}
             </div>
 
+            <div class="article-metadata">
+                <a class="mr-2" href="#">{{ post.author.username }}</a>
+                <small class="text-muted">{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }} UTC</small>
+                 {% if current_user.is_authenticated and current_user.is_admin %}
+                    <div class="float-end">
+                         </div>
+                 {% endif %}
+            </div> <div class="mb-3">
+                {% set post_url = url_for('main.post', slug=post.slug, _external=True) %}
+                <a href="https://twitter.com/intent/tweet?url={{ post_url }}&text={{ post.title|urlencode }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on X">X (Twitter)</a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ post_url }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on Facebook">Facebook</a>
+                <a href="https://www.reddit.com/submit?url={{ post_url }}&title={{ post.title|urlencode }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on Reddit">Reddit</a>
+                <a href="mailto:?subject={{ post.title|urlencode }}&body=Check out this article: {{ post_url }}" class="btn btn-outline-secondary btn-sm" title="Share via Email">Email</a>
+            </div>
+            <h2 class="article-title">{{ post.title }}</h2>
+
             <h2 class="article-title">{{ post.title }}</h2>
                 {% if post.image_url %}
                 <div class="post-image mb-3 text-center"> {# Add some margin #}
