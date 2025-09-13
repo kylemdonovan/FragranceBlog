@@ -1,4 +1,4 @@
-from flask import make_response
+from flask import make_response, jsonify
 from datetime import datetime, timezone
 from flask_mail import Message
 from app import mail, limiter, db
@@ -331,6 +331,11 @@ def contact():
 def privacy_policy():
     """Displays the privacy policy page."""
     return render_template('privacy_policy.html', title='Privacy Policy')
+
+@bp.route('/about')
+def about():
+    """Displays the about page."""
+    return render_template('about.html', title='About')
 
 # === NEWSLETTER SUBSCRIBE ROUTE ===
 @bp.route('/subscribe', methods=['POST'])

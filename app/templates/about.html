@@ -1,0 +1,49 @@
+{# app/templates/about.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-section">
+    <div class="row">
+        <div class="col-md-4 text-center">
+            {# --- ACTION REQUIRED: Add a professional-looking photo of yourself --- #}
+            {# --- 1. Add an image named 'profile_pic.jpg' to your app/static/ folder --- #}
+            {# --- 2. Uncomment the line below when the image is ready --- #}
+            {# <img src="{{ url_for('static', filename='profile_pic.jpg') }}" alt="Your Name" class="img-fluid rounded-circle mb-3" style="width: 200px; height: 200px; object-fit: cover;"> #}
+
+            <h3 class="mt-3">Kyle Donovan</h3>
+            <p class="text-muted">Creator of Liquid Blossom</p>
+        </div>
+        <div class="col-md-8">
+            <legend class="border-bottom mb-4">About The Blog</legend>
+
+            <p class="lead">Welcome to Liquid Blossom, where fragrance meets existential crisis and somehow both come out better for it.</p>
+
+            <p>
+                Look, I didn't plan on becoming the guy who writes thousand-word essays about bergamot. Life just happened. One day I'm under the hood of a broken-down car in Florida heat, contemplating my life choices, and the next I'm catching a whiff of something that basically teleported me to an Italian terrace. That's when I realized: some things don't just smell good. They rearrange reality.
+            </p>
+
+            <p>
+                This isn't your typical fragrance blog where everything is "fresh and clean with good longevity." I'm here to tell you when a scent makes you question the nature of time itself, or when it smells like the philosophical weight of a Camus novel. Because honestly? Most fragrance writing is boring as hell, and life's too short for boring.
+            </p>
+
+            <p>
+                I built this whole site myself because I had things to say and nowhere that felt right to say them. Every line of code, every CSS tweak, every database query that makes this thing work—that's me. Not because I'm trying to show off, but because when you care about something enough, you build it properly.
+            </p>
+
+            <p>
+                What you'll find here: honest reactions to everything from niche masterpieces to department store disasters. Stories about how scent intersects with memory, philosophy, and the general absurdity of being human. And yeah, probably too many metaphors involving cosmic forces and mechanical engineering.
+            </p>
+
+            <p>
+                Whether you're a hardcore collector who knows the difference between Ambergris and Ambroxan, or someone who just wants to smell good without smelling like everyone else, welcome. Let's figure out this beautiful, ridiculous art form together.
+            </p>
+
+            <hr>
+
+            <p>
+                Got a fragrance that changed your life? Think I'm completely wrong about something? Built your own website because you're also slightly unhinged about creative independence? <a href="{{ url_for('main.contact') }}">Let's talk</a>.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
