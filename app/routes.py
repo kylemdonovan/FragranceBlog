@@ -230,13 +230,28 @@ def post(slug):
     prev_url_comments = url_for('main.post', slug=slug,
                                 page=pagination_comments.prev_num) if pagination_comments.has_prev else None
 
+    related_posts = []
+    if post_obj.tags:
+        # Get the IDs of the tags for the current post
+        tag_ids = [tag.id for tag in post_obj.tags]
+
+        # Find other posts that have at least one of the same tags
+        related_posts_query = sa.select(Post).join(Post.tags).where(
+            Tag.id.in_(tag_ids),
+            Post.id != post_obj.id,  # Exclude the current post
+            Post.status == True  # Only show published posts
+        ).distinct().order_by(Post.published_at.desc()).limit(
+            3)  # Get the 3 most recent
+
+        related_posts = db.session.scalars(related_posts_query).all()
+
     # Passing the pagination objects to the template for more flexible rendering
     return render_template('post.html', title=post_obj.title, post=post_obj,
                            form=form,
                            comments=comments, next_url=next_url_comments,
                            prev_url=prev_url_comments,
-                           pagination=pagination_comments)
-
+                           pagination=pagination_comments,
+                           related_posts=related_posts)
 
 # === Public User Registration Route ===
 

@@ -68,6 +68,33 @@
     </div>
     {# END TAG DISPLAY BLOCK #}
 
+    </article> {# TAG DISPLAY BLOCK HERE #}
+        {% if related_posts %}
+    <div class="content-section mt-4">
+        <h3 class="mb-4">You Might Also Like</h3>
+        <div class="row">
+            {% for r_post in related_posts %}
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 shadow-sm">
+                        {% if r_post.image_url %}
+                            {% set thumb_url = r_post.image_url.replace('/upload/', '/upload/w_300,h_200,c_fill,g_auto,f_auto,q_auto/') %}
+                            <a href="{{ url_for('main.post', slug=r_post.slug) }}">
+                                <img src="{{ thumb_url }}" class="card-img-top" alt="{{ r_post.title }} thumbnail">
+                            </a>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a class="article-title" href="{{ url_for('main.post', slug=r_post.slug) }}">{{ r_post.title }}</a>
+                            </h5>
+                            <small class="text-muted">{{ r_post.published_at.strftime('%B %d, %Y') }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {# Comments Section #}
     <div class="content-section mt-4">
         <h3>Comments</h3>
