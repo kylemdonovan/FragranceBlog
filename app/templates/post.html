@@ -127,7 +127,7 @@
 
         {# Display Existing Comments with Edit/Delete Functionality #}
         {% for comment in comments %}
-            <div class="comment border-bottom pb-2 mb-3" id="comment-{{ comment.id }}">
+            <div class="comment border-bottom pb-2 mb-3 {% if comment.commenter.is_admin %}admin-comment{% endif %}" id="comment-{{ comment.id }}">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     {# Left side: Author and Timestamp #}
                     <div>

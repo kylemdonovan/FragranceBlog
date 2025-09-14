@@ -146,3 +146,26 @@ a:hover {
     color: var(--link-color, #D4AF37);
     text-decoration: underline;
 }
+
+/* --- ADMIN COMMENT HIGHLIGHTING --- */
+.admin-comment {
+    background-color: var(--card-bg); /* Use the card background as a base */
+    border-left: 3px solid var(--link-color, #8B4513); /* Use your theme's link color for the border */
+    padding: 1rem;
+    margin-left: -1rem; /* Adjust padding to align with other comments */
+    margin-right: -1rem;
+    border-radius: 4px;
+}
+
+/* Add a small "Author" badge to the admin's username */
+.admin-comment strong::after {
+    content: 'Author';
+    font-size: 0.75em;
+    font-weight: bold;
+    color: var(--button-primary-text);
+    background-color: var(--link-color);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
