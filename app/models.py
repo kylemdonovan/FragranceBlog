@@ -74,13 +74,34 @@ class Post(db.Model):
             i += 1
         return slug
 
+
 class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, index=True, default=lambda: datetime.now(timezone.utc))
+    timestamp = db.Column(db.DateTime, index=True,
+                          default=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    replies = db.relationship(
+        'Comment', backref=db.backref('parent', remote_side=[id]),
+        lazy='dynamic', cascade='all, delete-orphan'
+    )
+
+
+class CommentLike(db.Model):
+    __tablename__ = 'comment_likes'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'),
+                           nullable=False)
+    timestamp = db.Column(db.DateTime,
+                          default=lambda: datetime.now(timezone.utc))
+    user = db.relationship('User', backref='comment_likes')
+    comment = db.relationship('Comment', backref='likes')
+
+
 
 class Subscriber(db.Model):
     __tablename__ = 'subscribers'
