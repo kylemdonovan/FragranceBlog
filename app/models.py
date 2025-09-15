@@ -102,7 +102,6 @@ class CommentLike(db.Model):
     comment = db.relationship('Comment', backref='likes')
 
 
-
 class Subscriber(db.Model):
     __tablename__ = 'subscribers'
     id = db.Column(db.Integer, primary_key=True)
