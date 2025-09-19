@@ -7,9 +7,7 @@
                         <fieldset class="form-group">
                 <legend class="border-bottom mb-4">Log In</legend>
                 <div class="form-floating mb-3">
-                    {# === CHANGE THIS LINE === #}
                     {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), placeholder="Username") }}
-                    {# === AND THIS LINE === #}
                     {{ form.username.label(class="form-label") }}
                      {% if form.username.errors %}
                         <div class="invalid-feedback">
@@ -41,7 +39,11 @@
         </form>
     </div>
 <div class="border-top pt-3">
-        {# Link directly in the div #}
-        <a class="ms-2" href="{{ url_for('main.reset_password_request') }}">Forgot Password?</a>
-    </div>
+    <small class="text-muted">
+        Need an account? <a class="ms-2" href="{{ url_for('main.signup') }}">Sign Up Now</a>
+    </small>
+    <small class="text-muted float-end">
+        <a href="{{ url_for('main.reset_password_request') }}">Forgot Password?</a>
+    </small>
+</div>
 {% endblock %}
