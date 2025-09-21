@@ -1,6 +1,52 @@
 {# app/templates/post.html - STARTING VERSION #}
 {% extends "base.html" %}
 
+
+{# ===== Added recursive comment loading for nested comments ==== #}
+{% macro render_comments(comments, reply_form, post, current_user, level=0) %}
+    {% for comment in comments %}
+        <div class="comment-thread" style="margin-left: {{ level * 25 }}px;">
+            <div class="comment border-bottom pb-2 mb-3 {% if comment.commenter.is_admin %}admin-comment{% endif %}" id="comment-{{ comment.id }}">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div>
+                        <strong>{{ comment.commenter.username }}</strong>
+                        <small class="text-muted ms-2">{{ comment.timestamp.strftime('%B %d, %Y') }}</small>
+                    </div>
+                    {% if current_user.is_authenticated %}
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-1 reply-btn" data-comment-id="{{ comment.id }}">Reply</button>
+                        {% if current_user == comment.commenter or current_user.is_admin %}
+                        <a href="{{ url_for('main.edit_comment', comment_id=comment.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-1 ms-1">Edit</a>
+                        <form action="{{ url_for('main.delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline ms-1">
+                            {{ comment_form.hidden_tag() }}
+                            <input type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" value="Delete" onclick="return confirm('Are you sure?');">
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <p class="mb-0">{{ comment.body }}</p>
+            </div>
+
+            <div id="reply-form-{{ comment.id }}" class="reply-form-container" style="display: none;">
+                <form method="POST" action="{{ url_for('main.post', slug=post.slug) }}">
+                    {{ reply_form.hidden_tag() }}
+                    {{ reply_form.parent_id(value=comment.id) }}
+                    <div class="form-floating mb-2">
+                        {{ reply_form.body(class="form-control form-control-sm", placeholder="Your Reply", rows="3") }}
+                        {{ reply_form.body.label }}
+                    </div>
+                    {{ reply_form.submit(class="btn btn-sm btn-primary") }}
+                </form>
+            </div>
+
+            {% if comment.replies %}
+                {{ render_comments(comment.replies.all(), reply_form, post, current_user, level + 1) }}
+            {% endif %}
+        </div>
+    {% endfor %}
+{% endmacro %}
+
 {% block content %}
     <article class="media content-section">
         <div class="media-body">
@@ -22,21 +68,13 @@
                  {% endif %}
             </div>
 
-            <div class="article-metadata">
-                <a class="mr-2" href="#">{{ post.author.username }}</a>
-                <small class="text-muted">{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }} UTC</small>
-                 {% if current_user.is_authenticated and current_user.is_admin %}
-                    <div class="float-end">
-                         </div>
-                 {% endif %}
-            </div> <div class="mb-3">
+                <div class="mb-3">
                 {% set post_url = url_for('main.post', slug=post.slug, _external=True) %}
                 <a href="https://twitter.com/intent/tweet?url={{ post_url }}&text={{ post.title|urlencode }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on X">X (Twitter)</a>
                 <a href="https://www.facebook.com/sharer/sharer.php?u={{ post_url }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on Facebook">Facebook</a>
                 <a href="https://www.reddit.com/submit?url={{ post_url }}&title={{ post.title|urlencode }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on Reddit">Reddit</a>
                 <a href="mailto:?subject={{ post.title|urlencode }}&body=Check out this article: {{ post_url }}" class="btn btn-outline-secondary btn-sm" title="Share via Email">Email</a>
             </div>
-            <h2 class="article-title">{{ post.title }}</h2>
 
             <h2 class="article-title">{{ post.title }}</h2>
                 {% if post.image_url %}
@@ -49,7 +87,7 @@
             {% endif %}
 
                 <div class="article-content">{{ post.body | safe }}</div>
-            
+
             </div>
 
             </article>
@@ -102,14 +140,14 @@
         {# Comment Form #}
          {% if current_user.is_authenticated %}
             <form method="POST" action=""> {# Submits to the current post URL #}
-                {{ form.hidden_tag() }} {# CSRF token #}
+                {{ comment_form.hidden_tag() }} {# CSRF token #}
                 <fieldset class="form-group mb-3">
                     <div class="form-floating">
-                         {{ form.body(class="form-control" + (" is-invalid" if form.body.errors else ""), style="height: 100px", placeholder="Leave a comment here") }}
-                         {{ form.body.label(class="form-label") }}
-                         {% if form.body.errors %}
+                         {{ comment_form.body(class="form-control" + (" is-invalid" if comment_form.body.errors else ""), style="height: 100px", placeholder="Leave a comment here") }}
+                         {{ comment_form.body.label(class="form-label") }}
+                         {% if comment_form.body.errors %}
                             <div class="invalid-feedback">
-                                {% for error in form.body.errors %}
+                                {% for error in comment_form.body.errors %}
                                     <span>{{ error }}</span>
                                 {% endfor %}
                             </div>
@@ -125,48 +163,37 @@
             <p><a href="{{ url_for('main.login', next=url_for('main.post', slug=post.slug)) }}">Log in</a> to post a comment.</p>
         {% endif %}
 
-        {# Display Existing Comments with Edit/Delete Functionality #}
-        {% for comment in comments %}
-            <div class="comment border-bottom pb-2 mb-3 {% if comment.commenter.is_admin %}admin-comment{% endif %}" id="comment-{{ comment.id }}">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    {# Left side: Author and Timestamp #}
-                    <div>
-                        <strong>{{ comment.commenter.username }}</strong>
-                        <small class="text-muted ms-2">{{ comment.timestamp.strftime('%B %d, %Y at %I:%M %p') }} UTC</small>
-                    </div>
-                    {# Right side: Edit/Delete buttons, shown only to the author or an admin (me) #}
-                    {% if current_user.is_authenticated and (current_user == comment.commenter or current_user.is_admin) %}
-                    <div>
-                        <a href="{{ url_for('main.edit_comment', comment_id=comment.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-1">Edit</a>
-                        {# The Delete button is a mini-form for security (uses POST) #}
-                        <form action="{{ url_for('main.delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline ms-1">
-                            {# This form needs a CSRF token. Borrowed from the main comment form on the page. #}
-                            {{ form.hidden_tag() }}
-                            <input type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" value="Delete" onclick="return confirm('Are you sure you want to permanently delete this comment?');">
-                        </form>
-                    </div>
-                    {% endif %}
-                </div>
-                {# The actual comment body #}
-                <p class="mb-0">{{ comment.body }}</p>
-            </div>
-        {% else %}
-             <p class="text-muted">No comments yet. Be the first to comment!</p>
-        {% endfor %}
-
-        <nav aria-label="Comment navigation">
-          <ul class="pagination justify-content-center mt-3">
-            {% if prev_url %}
-              <li class="page-item"><a class="page-link" href="{{ url_for('main.post', slug=post.slug, page=comments.prev_num) }}">Previous Comments</a></li> {# Assuming route passes prev_num #}
-            {% else %}
-              <li class="page-item disabled"><span class="page-link">Previous Comments</span></li>
-            {% endif %}
-            {% if next_url %}
-              <li class="page-item"><a class="page-link" href="{{ url_for('main.post', slug=post.slug, page=comments.next_num) }}">Next Comments</a></li> {# Assuming route passes next_num #}
-            {% else %}
-              <li class="page-item disabled"><span class="page-link">Next Comments</span></li>
-            {% endif %}
-          </ul>
-        </nav>
+        {# Display Existing Comments with Edit/Delete Functionality #}{# Display Existing Comments #}
+        {#{% if comments %}
+            {#    {{ render_comments(comments, reply_form, post, current_user) }}
+            {#{% else %}
+            {#     <p class="text-muted">No comments yet. Be the first to comment!</p>
+            {#{% endif %}
     </div>
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const replyButtons = document.querySelectorAll('.reply-btn');
+            replyButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const commentId = this.getAttribute('data-comment-id');
+                    const replyFormContainer = document.getElementById(`reply-form-${commentId}`);
+
+                    // Hide all other open reply forms
+                    document.querySelectorAll('.reply-form-container').forEach(form => {
+                        if (form.id !== `reply-form-${commentId}`) {
+                            form.style.display = 'none';
+                        }
+                    });
+
+                    // Toggle clicked form
+                    if (replyFormContainer) {
+                        replyFormContainer.style.display = (replyFormContainer.style.display === 'none') ? 'block' : 'none';
+                    }
+                });
+            });
+        });
+    </script>
+
 {% endblock %}
