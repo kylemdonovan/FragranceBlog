@@ -4,7 +4,7 @@ from flask_mail import Message
 from app import mail, limiter, db
 from feedgen.feed import FeedGenerator
 from flask import Response, send_from_directory
-from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm,
+from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ReplyForm,
                        ContactForm, RequestPasswordResetForm,
                        ResetPasswordForm, ChangePasswordForm, EditCommentForm,
                        SubscriptionForm, ChangeUsernameForm)
@@ -183,75 +183,50 @@ def index():
 
 @bp.route('/post/<string:slug>', methods=['GET', 'POST'])
 def post(slug):
-    """Displays a single post by its slug and handles comment submission."""
+    """Displays a single post and handles comment and reply submissions."""
     post_obj = db.session.scalar(sa.select(Post).filter_by(slug=slug))
 
-    # Checks if the post doesn't exist, OR if draft && visitor isnot admin.
     if post_obj is None or (not post_obj.status and not (
             current_user.is_authenticated and current_user.is_admin)):
         flash('Post not found or is currently a draft.', 'warning')
-        current_app.logger.warning(
-            f"Attempt to access non-existent or draft post with slug: {slug}")
         return redirect(url_for('main.index'))
 
-    form = CommentForm()
-    if form.validate_on_submit():
-        if not current_user.is_authenticated:
-            flash('You must be logged in to comment.', 'warning')
-            return redirect(url_for('main.login', next=url_for('main.post',
-                                                               slug=post_obj.slug)))
+    comment_form = CommentForm()
+    reply_form = ReplyForm()
 
-        comment = Comment(body=form.body.data, commenter=current_user,
-                          post=post_obj)
-        db.session.add(comment)
-        try:
+    # --- Logic to handle a new REPLY submission ---
+    if reply_form.validate_on_submit() and reply_form.submit.data:
+        if not current_user.is_authenticated:
+            flash('You must be logged in to reply.', 'warning')
+            return redirect(url_for('main.login', next=request.url))
+
+        parent_comment = db.session.get(Comment, int(reply_form.parent_id.data))
+        if parent_comment:
+            reply = Comment(body=reply_form.body.data,
+                            commenter=current_user,
+                            post=post_obj,
+                            parent=parent_comment)
+            db.session.add(reply)
             db.session.commit()
-            flash('Your comment has been published.', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error saving comment. Please try again.', 'danger')
-            current_app.logger.error(
-                f"DB Error saving comment for post {post_obj.id} (slug: {slug}): {e}",
-                exc_info=True)
+            flash('Your reply has been posted.', 'success')
+        else:
+            flash('Parent comment not found.', 'danger')
         return redirect(url_for('main.post', slug=post_obj.slug))
 
-    page = request.args.get('page', 1, type=int)
-    per_page_comments = current_app.config.get('COMMENTS_PER_PAGE', 10)
-    comments_query = sa.select(Comment).where(
-        Comment.post_id == post_obj.id).order_by(Comment.timestamp.desc())
-    pagination_comments = db.paginate(comments_query, page=page,
-                                      per_page=per_page_comments,
-                                      error_out=False)
-    comments = pagination_comments.items
+    # --- Logic to handle a new top-level COMMENT submission ---
+    if comment_form.validate_on_submit() and comment_form.submit.data:
+        if not current_user.is_authenticated:
+            flash('You must be logged in to comment.', 'warning')
+            return redirect(url_for('main.login', next=request.url))
 
-    # These variable names were conflicting with the main post pagination, renamed for clarity
-    next_url_comments = url_for('main.post', slug=slug,
-                                page=pagination_comments.next_num) if pagination_comments.has_next else None
-    prev_url_comments = url_for('main.post', slug=slug,
-                                page=pagination_comments.prev_num) if pagination_comments.has_prev else None
+        comment = Comment(body=comment_form.body.data,
+                          commenter=current_user,
+                          post=post_obj)
+        db.session.add(comment)
+        db.session.commit()
+        flash('Your comment has been published.', 'success')
+        return redirect(url_for('main.post', slug=post_obj.slug))
 
-    related_posts = []
-    if post_obj.tags:
-        # Get the IDs of the tags for the current post
-        tag_ids = [tag.id for tag in post_obj.tags]
-
-        # Find other posts that have at least one of the same tags
-        related_posts_query = sa.select(Post).join(Post.tags).where(
-            Tag.id.in_(tag_ids),
-            Post.id != post_obj.id,  # Exclude the current post
-            Post.status == True  # Only show published posts
-        ).distinct().order_by(Post.published_at.desc()).limit(
-            3)  # Get the 3 most recent
-
-        related_posts = db.session.scalars(related_posts_query).all()
-
-    # Passing the pagination objects to the template for more flexible rendering
-    return render_template('post.html', title=post_obj.title, post=post_obj,
-                           form=form,
-                           comments=comments, next_url=next_url_comments,
-                           prev_url=prev_url_comments,
-                           pagination=pagination_comments,
-                           related_posts=related_posts)
 
 # === Public User Registration Route ===
 

@@ -1,7 +1,7 @@
 # app/forms.py
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileSize
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, HiddenField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 from app.models import User, Subscriber
 import sqlalchemy as sa
@@ -44,16 +44,16 @@ class PostForm(FlaskForm):
         FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!'),
         FileSize(max_size=5 * 1024 * 1024) # Example: Max 5MB size limit
     ])
-    
+
     tags = StringField('Tags (comma-separated, optional)', validators = [Length(max=1000)])
     status = BooleanField('Publish this post immediately', default='checked')
-    
+
     submit = SubmitField('Publish Post')
 
 class CommentForm(FlaskForm):
     body = TextAreaField('Your Comment', validators=[DataRequired(), Length(min=1, max=500)])
     submit = SubmitField('Submit Comment')
-    
+
 # --- CONTACT FORM CLASS ---
 class ContactForm(FlaskForm):
     name = StringField('Your Name', validators=[DataRequired(), Length(min=2, max=100)])
@@ -147,3 +147,8 @@ class SubscriptionForm(FlaskForm):
         subscriber = db.session.scalar(db.select(Subscriber).where(Subscriber.email == email.data.lower()))
         if subscriber is not None:
             raise ValidationError('This email address is already subscribed.')
+
+class ReplyForm(FlaskForm):
+    body = TextAreaField('Your Reply', validators=[DataRequired(), Length(min=1, max=500)])
+    parent_id = HiddenField('Parent ID', validators=[DataRequired()])
+    submit = SubmitField('Submit Reply')
