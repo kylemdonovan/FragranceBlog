@@ -92,7 +92,6 @@
 
             </article>
 
-        {# TAG DISPLAY BLOCK HERE #}
     <div class="post-tags mt-3 mb-3"> {# Added margin bottom #}
         <strong>Tags:</strong>
         {% if post.tags %}
@@ -104,9 +103,8 @@
             <span class="text-muted">No tags assigned.</span>
         {% endif %}
     </div>
-    {# END TAG DISPLAY BLOCK #}
 
-    </article> {# TAG DISPLAY BLOCK HERE #}
+    </article>
         {% if related_posts %}
     <div class="content-section mt-4">
         <h3 class="mb-4">You Might Also Like</h3>
@@ -155,7 +153,7 @@
                     </div>
                 </fieldset>
                 <div class="form-group mb-3">
-                    {{ form.submit(class="btn btn-outline-info") }}
+                    {{ comment_form.submit(class="btn btn-outline-info") }}
                 </div>
             </form>
         {% else %}

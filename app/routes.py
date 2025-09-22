@@ -25,7 +25,6 @@ from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
 
-
 # --- Create Blueprint ---
 bp = Blueprint('main', __name__)
 
