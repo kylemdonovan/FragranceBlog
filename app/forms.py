@@ -52,7 +52,7 @@ class PostForm(FlaskForm):
 
 class CommentForm(FlaskForm):
     body = TextAreaField('Your Comment', validators=[DataRequired(), Length(min=1, max=500)])
-    submit = SubmitField('Submit Comment')
+    submit_comment = SubmitField('Submit Comment')
 
 # --- CONTACT FORM CLASS ---
 class ContactForm(FlaskForm):
@@ -151,4 +151,4 @@ class SubscriptionForm(FlaskForm):
 class ReplyForm(FlaskForm):
     body = TextAreaField('Your Reply', validators=[DataRequired(), Length(min=1, max=500)])
     parent_id = HiddenField('Parent ID', validators=[DataRequired()])
-    submit = SubmitField('Submit Reply')
+    submit_reply = SubmitField('Submit Reply')

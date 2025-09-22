@@ -194,7 +194,7 @@ def post(slug):
     reply_form = ReplyForm()
 
     # --- Logic to handle a new REPLY submission ---
-    if reply_form.validate_on_submit() and reply_form.submit.data:
+    if reply_form.validate_on_submit() and 'submit_reply' in request.form: # Check which form was submitted
         if not current_user.is_authenticated:
             flash('You must be logged in to reply.', 'warning')
             return redirect(url_for('main.login', next=request.url))
@@ -210,10 +210,10 @@ def post(slug):
             flash('Your reply has been posted.', 'success')
         else:
             flash('Parent comment not found.', 'danger')
-        return redirect(url_for('main.post', slug=post_obj.slug))
+        return redirect(url_for('main.post', slug=post_obj.slug, _anchor=f'comment-{parent_comment.id}'))
 
     # --- Logic to handle a new top-level COMMENT submission ---
-    if comment_form.validate_on_submit() and comment_form.submit.data:
+    if comment_form.validate_on_submit() and 'submit_comment' in request.form: # Check which form was submitted
         if not current_user.is_authenticated:
             flash('You must be logged in to comment.', 'warning')
             return redirect(url_for('main.login', next=request.url))
@@ -224,7 +224,28 @@ def post(slug):
         db.session.add(comment)
         db.session.commit()
         flash('Your comment has been published.', 'success')
-        return redirect(url_for('main.post', slug=post_obj.slug))
+        return redirect(url_for('main.post', slug=post_obj.slug, _anchor=f'comment-{comment.id}'))
+
+    # Fetch top-level comments (comments with no parent)
+    top_level_comments = post_obj.comments.filter(Comment.parent_id.is_(None)).order_by(Comment.timestamp.asc()).all()
+
+    # Simple related posts query (can be improved later)
+    related_posts = []
+    if post_obj.tags:
+        # Get the first tag and find other posts with it
+        first_tag = post_obj.tags[0]
+        related_posts = db.session.scalars(
+            sa.select(Post)
+            .join(Post.tags)
+            .where(Tag.id == first_tag.id, Post.id != post_obj.id, Post.status == True)
+            .order_by(Post.published_at.desc())
+            .limit(3)
+        ).all()
+
+
+    return render_template('post.html', title=post_obj.title, post=post_obj,
+                           comment_form=comment_form, reply_form=reply_form,
+                           comments=top_level_comments, related_posts=related_posts)
 
 
 # === Public User Registration Route ===

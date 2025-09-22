@@ -1,8 +1,7 @@
-{# app/templates/post.html - STARTING VERSION #}
+{# app/templates/post.html #}
 {% extends "base.html" %}
 
-
-{# ===== Added recursive comment loading for nested comments ==== #}
+{# ===== Recursive comment loading for nested comments ==== #}
 {% macro render_comments(comments, reply_form, post, current_user, level=0) %}
     {% for comment in comments %}
         <div class="comment-thread" style="margin-left: {{ level * 25 }}px;">
@@ -36,7 +35,7 @@
                         {{ reply_form.body(class="form-control form-control-sm", placeholder="Your Reply", rows="3") }}
                         {{ reply_form.body.label }}
                     </div>
-                    {{ reply_form.submit(class="btn btn-sm btn-primary") }}
+                    {{ reply_form.submit_reply(class="btn btn-sm btn-primary") }}
                 </form>
             </div>
 
@@ -51,16 +50,12 @@
     <article class="media content-section">
         <div class="media-body">
             <div class="article-metadata">
-                <a class="mr-2" href="#">{{ post.author.username }}</a> {# Link to user profile later? #}
+                <a class="mr-2" href="#">{{ post.author.username }}</a>
                 <small class="text-muted">{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }} UTC</small>
                  {% if current_user.is_authenticated and current_user.is_admin %}
-                    {# Admin Edit/Delete Links #}
                     <div class="float-end">
-                         {# NOTE: This edit link will need to change for slugs later #}
                          <a class="btn btn-secondary btn-sm mt-1 mb-1" href="{{ url_for('main.edit_post', post_id=post.id) }}">Edit</a>
-                         {# Delete needs a form for CSRF protection #}
                          <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="POST" style="display: inline;">
-                            {# NOTE: This delete form action will need to change for slugs later #}
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="submit" class="btn btn-danger btn-sm" value="Delete" onclick="return confirm('Are you sure you want to delete this post?');">
                          </form>
@@ -68,7 +63,7 @@
                  {% endif %}
             </div>
 
-                <div class="mb-3">
+            <div class="mb-3">
                 {% set post_url = url_for('main.post', slug=post.slug, _external=True) %}
                 <a href="https://twitter.com/intent/tweet?url={{ post_url }}&text={{ post.title|urlencode }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on X">X (Twitter)</a>
                 <a href="https://www.facebook.com/sharer/sharer.php?u={{ post_url }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Share on Facebook">Facebook</a>
@@ -77,26 +72,21 @@
             </div>
 
             <h2 class="article-title">{{ post.title }}</h2>
-                {% if post.image_url %}
-                <div class="post-image mb-3 text-center"> {# Add some margin #}
-             {# Example Cloudinary Transformation: limit width to 800px, auto format/quality #}
-             {# Construct URL manually or use Cloudinary Python helpers if needed #}
+            {% if post.image_url %}
+            <div class="post-image mb-3 text-center">
              {% set transformed_url = post.image_url.replace('/upload/', '/upload/w_800,f_auto,q_auto/') %}
-                    <img src="{{ transformed_url }}" class="img-fluid rounded" alt="{{ post.title }} featured image"> {# Bootstrap classes #}
-                </div>
+                <img src="{{ transformed_url }}" class="img-fluid rounded" alt="{{ post.title }} featured image">
+            </div>
             {% endif %}
 
-                <div class="article-content">{{ post.body | safe }}</div>
+            <div class="article-content">{{ post.body | safe }}</div>
+        </div>
+    </article>
 
-            </div>
-
-            </article>
-
-    <div class="post-tags mt-3 mb-3"> {# Added margin bottom #}
+    <div class="post-tags mt-3 mb-3">
         <strong>Tags:</strong>
         {% if post.tags %}
             {% for tag in post.tags %}
-                {# Link each tag to its dedicated page #}
                 <a href="{{ url_for('main.tag', tag_name=tag.name) }}" class="badge bg-secondary text-decoration-none me-1">{{ tag.name }}</a>
             {% endfor %}
         {% else %}
@@ -104,8 +94,7 @@
         {% endif %}
     </div>
 
-    </article>
-        {% if related_posts %}
+    {% if related_posts %}
     <div class="content-section mt-4">
         <h3 class="mb-4">You Might Also Like</h3>
         <div class="row">
@@ -133,12 +122,12 @@
 
     {# Comments Section #}
     <div class="content-section mt-4">
-        <h3>Comments</h3>
+        <h3>Comments ({{ post.comments.count() }})</h3>
         <hr>
         {# Comment Form #}
          {% if current_user.is_authenticated %}
-            <form method="POST" action=""> {# Submits to the current post URL #}
-                {{ comment_form.hidden_tag() }} {# CSRF token #}
+            <form method="POST" action="">
+                {{ comment_form.hidden_tag() }}
                 <fieldset class="form-group mb-3">
                     <div class="form-floating">
                          {{ comment_form.body(class="form-control" + (" is-invalid" if comment_form.body.errors else ""), style="height: 100px", placeholder="Leave a comment here") }}
@@ -153,21 +142,21 @@
                     </div>
                 </fieldset>
                 <div class="form-group mb-3">
-                    {{ comment_form.submit(class="btn btn-outline-info") }}
+                    {{ comment_form.submit_comment(class="btn btn-outline-info") }}
                 </div>
             </form>
         {% else %}
-             {# NOTE: This login link will need to change for slugs later #}
             <p><a href="{{ url_for('main.login', next=url_for('main.post', slug=post.slug)) }}">Log in</a> to post a comment.</p>
         {% endif %}
 
-        {# Display Existing Comments with Edit/Delete Functionality #}{# Display Existing Comments #}
-        {#{% if comments %}
-            {#    {{ render_comments(comments, reply_form, post, current_user) }}
-            {#{% else %}
-            {#     <p class="text-muted">No comments yet. Be the first to comment!</p>
-            {#{% endif %}
+        {# Display Existing Comments #}
+        {% if comments %}
+            {{ render_comments(comments, reply_form, post, current_user) }}
+        {% else %}
+             <p class="text-muted">No comments yet. Be the first to comment!</p>
+        {% endif %}
     </div>
+{% endblock %}
 
 {% block scripts %}
     <script>
@@ -178,14 +167,12 @@
                     const commentId = this.getAttribute('data-comment-id');
                     const replyFormContainer = document.getElementById(`reply-form-${commentId}`);
 
-                    // Hide all other open reply forms
                     document.querySelectorAll('.reply-form-container').forEach(form => {
                         if (form.id !== `reply-form-${commentId}`) {
                             form.style.display = 'none';
                         }
                     });
 
-                    // Toggle clicked form
                     if (replyFormContainer) {
                         replyFormContainer.style.display = (replyFormContainer.style.display === 'none') ? 'block' : 'none';
                     }
@@ -193,5 +180,4 @@
             });
         });
     </script>
-
 {% endblock %}
