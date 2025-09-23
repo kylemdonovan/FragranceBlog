@@ -1,6 +1,34 @@
 {# app/templates/post.html - FINAL, CORRECTED VERSION #}
 {% extends "base.html" %}
 
+{# app/templates/post.html #}
+{% extends "base.html" %}
+
+{% block meta_tags %}
+    {# Use super() to keep any default tags from base.html if needed, then override #}
+    <meta name="description" content="{{ post.body | striptags | truncate(155, True) }}">
+    {# Open Graph #}
+    <meta property="og:title" content="{{ post.title }}">
+    <meta property="og:site_name" content="{{ config.get('BLOG_NAME') }}">
+    <meta property="og:description" content="{{ post.body | striptags | truncate(155, True) }}">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="{{ url_for('main.post', slug=post.slug, _external=True) }}">
+    {% if post.image_url %}
+        <meta property="og:image" content="{{ post.image_url }}">
+    {% else %}
+        <meta property="og:image" content="{{ url_for('static', filename='web-app-manifest-512x512.png', _external=True) }}">
+    {% endif %}
+    {# Twitter Card #}
+    {% if post.image_url %}
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:image" content="{{ post.image_url }}">
+    {% else %}
+        <meta name="twitter:card" content="summary">
+    {% endif %}
+    <meta name="twitter:title" content="{{ post.title }}">
+    <meta name="twitter:description" content="{{ post.body | striptags | truncate(155, True) }}">
+{% endblock meta_tags %}
+
 {# ===== Recursive comment loading for nested comments ==== #}
 {% macro render_comments(comments, reply_form, post, current_user, level=0) %}
     {% for comment in comments %}

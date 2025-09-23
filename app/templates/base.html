@@ -6,6 +6,22 @@
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    {# --- START: Social Sharing Meta Tags --- #}
+    {% block meta_tags %}
+        <meta name="description" content="Reviews, musings, and guides on the world of scents from Liquid Blossom.">
+        {# Open Graph (Facebook, etc.) #}
+        <meta property="og:title" content="{{ title or config.get('BLOG_NAME') }}">
+        <meta property="og:site_name" content="{{ config.get('BLOG_NAME') }}">
+        <meta property="og:description" content="Reviews, musings, and guides on the world of scents from Liquid Blossom.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ request.url }}">
+        <meta property="og:image" content="{{ url_for('static', filename='web-app-manifest-512x512.png', _external=True) }}">
+        {# Twitter Card #}
+        <meta name="twitter:card" content="summary">
+        {# <meta name="twitter:site" content="@YourTwitterHandle"> #}
+    {% endblock meta_tags %}
+    {# --- END: Social Sharing Meta Tags --- #}
+
     {# --- Anti-Flicker Theme Script (Executes First) --- #}
     <script>
       (() => {
