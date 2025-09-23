@@ -1,4 +1,4 @@
-{# app/templates/post.html #}
+{# app/templates/post.html - FINAL, CORRECTED VERSION #}
 {% extends "base.html" %}
 
 {# ===== Recursive comment loading for nested comments ==== #}
@@ -154,6 +154,37 @@
             {{ render_comments(comments, reply_form, post, current_user) }}
         {% else %}
              <p class="text-muted">No comments yet. Be the first to comment!</p>
+        {% endif %}
+
+        {# Comment Pagination Links - THIS IS THE NEW PART #}
+        {% if comment_pagination and comment_pagination.pages > 1 %}
+        <nav aria-label="Comment navigation">
+          <ul class="pagination justify-content-center mt-4">
+
+            <li class="page-item {% if not comment_pagination.has_prev %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('main.post', slug=post.slug, page=comment_pagination.prev_num) if comment_pagination.has_prev else '#' }}">Previous</a>
+            </li>
+
+            {% for page_num in comment_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+              {% if page_num %}
+                {% if comment_pagination.page == page_num %}
+                  <li class="page-item active" aria-current="page">
+                    <span class="page-link">{{ page_num }}</span>
+                  </li>
+                {% else %}
+                  <li class="page-item"><a class="page-link" href="{{ url_for('main.post', slug=post.slug, page=page_num) }}">{{ page_num }}</a></li>
+                {% endif %}
+              {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+              {% endif %}
+            {% endfor %}
+
+            <li class="page-item {% if not comment_pagination.has_next %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('main.post', slug=post.slug, page=comment_pagination.next_num) if comment_pagination.has_next else '#' }}">Next</a>
+            </li>
+
+          </ul>
+        </nav>
         {% endif %}
     </div>
 {% endblock %}

@@ -226,8 +226,12 @@ def post(slug):
         flash('Your comment has been published.', 'success')
         return redirect(url_for('main.post', slug=post_obj.slug, _anchor=f'comment-{comment.id}'))
 
-    # Fetch top-level comments (comments with no parent)
-    top_level_comments = post_obj.comments.filter(Comment.parent_id.is_(None)).order_by(Comment.timestamp.asc()).all()
+    # --- Paginate top-level comments ---
+    page = request.args.get('page', 1, type=int)
+    per_page = 5 # Comments per page
+    comments_query = post_obj.comments.filter(Comment.parent_id.is_(None)).order_by(Comment.timestamp.asc())
+    comment_pagination = db.paginate(comments_query, page=page, per_page=per_page, error_out=False)
+    top_level_comments = comment_pagination.items
 
     # Simple related posts query (can be improved later)
     related_posts = []
@@ -245,8 +249,8 @@ def post(slug):
 
     return render_template('post.html', title=post_obj.title, post=post_obj,
                            comment_form=comment_form, reply_form=reply_form,
-                           comments=top_level_comments, related_posts=related_posts)
-
+                           comments=top_level_comments, comment_pagination=comment_pagination,
+                           related_posts=related_posts)
 
 # === Public User Registration Route ===
 
