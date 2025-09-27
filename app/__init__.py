@@ -1,5 +1,8 @@
+# app/__init__.py
+
 import os
-from flask import Flask
+from flask import Flask, Markup
+import re # Import the regular expression module
 from config import Config
 from .extensions import db, migrate, login, csrf, mail, limiter
 import cloudinary
@@ -23,6 +26,21 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     mail.init_app(app)
     limiter.init_app(app)
+
+    # --- START: Custom Highlight Filter ---
+    def highlight(text, query):
+        """
+        A custom Jinja2 filter to highlight a search query in a block of text.
+        """
+        if not query:
+            return text
+        # Use a case-insensitive regex to find the query and wrap it in <mark> tags
+        # Markup() is used to prevent Jinja from auto-escaping the HTML
+        return Markup(re.sub(f'({re.escape(query)})', r'<mark>\1</mark>', text, flags=re.IGNORECASE))
+
+    # Register the custom filter with the Jinja2 environment
+    app.jinja_env.filters['highlight'] = highlight
+    # --- END: Custom Highlight Filter ---
 
     # Configure Cloudinary
     if app.config.get('CLOUDINARY_CLOUD_NAME'):

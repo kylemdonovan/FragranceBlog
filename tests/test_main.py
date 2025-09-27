@@ -18,7 +18,7 @@ def test_view_single_post(client, app):
             body='This is the body of the test post.',
             author=user,
             slug='my-first-test-post',
-            status=True # Published
+            status=True # Hashtag Published
         )
         db.session.add_all([user, post])
         db.session.commit()
