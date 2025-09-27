@@ -107,3 +107,5 @@ class Subscriber(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     subscribed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    confirmed = db.Column(db.Boolean, default=False)
+    token = db.Column(db.String(100), unique=True)

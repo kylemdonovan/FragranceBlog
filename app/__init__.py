@@ -27,20 +27,20 @@ def create_app(config_class=Config):
     mail.init_app(app)
     limiter.init_app(app)
 
-    # --- START: Custom Highlight Filter ---
+    # --- Custom Highlight Filter ---
     def highlight(text, query):
         """
         A custom Jinja2 filter to highlight a search query in a block of text.
         """
         if not query:
             return text
-        # Use a case-insensitive regex to find the query and wrap it in <mark> tags
-        # Markup() is used to prevent Jinja from auto-escaping the HTML
+        # Use a case-insensitive REGEX!!! to find the query and wrap it in <mark> tags
+        # Markup() is used to prevent Jinja from auto-escaping the HTML blah
         return Markup(re.sub(f'({re.escape(query)})', r'<mark>\1</mark>', text, flags=re.IGNORECASE))
 
     # Register the custom filter with the Jinja2 environment
     app.jinja_env.filters['highlight'] = highlight
-    # --- END: Custom Highlight Filter ---
+    # --- END Custom Highlight Filter ---
 
     # Configure Cloudinary
     if app.config.get('CLOUDINARY_CLOUD_NAME'):
@@ -58,7 +58,7 @@ def create_app(config_class=Config):
         from . import routes
         app.register_blueprint(routes.bp)
 
-        # Import models here so that they are registered with SQLAlchemy
+        # Import models here so that they are registered with SQLAAAAAAlchemy
         from . import models
 
     return app
