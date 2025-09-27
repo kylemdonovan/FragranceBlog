@@ -1,7 +1,8 @@
 # tests/test_main.py
 import pytest
-from app.models import User, Post, Comment, Tag, db
+from app.models import User, Post, Comment, Tag, db, Subscriber
 from slugify import slugify
+
 
 def test_view_single_post(client, app):
     """
@@ -141,3 +142,36 @@ def test_tag_page(client, app):
     assert response.status_code == 200
     assert b'Posts Tagged: <span class="badge bg-secondary">testing</span>' in response.data
     assert b'Tagged Post' in response.data
+
+
+def test_subscribe_and_confirm(client, app):
+    """
+    GIVEN a new user providing an email address
+    WHEN they subscribe via the form
+    THEN an unconfirmed subscriber should be created
+    WHEN they visit the confirmation link
+    THEN their subscription should be confirmed
+    """
+    # Action 1: A user subscribes
+    response = client.post('/subscribe', data={
+        'email': 'new.subscriber@example.com'
+    }, follow_redirects=True)
+
+    # Assert 1: Check for flash message and DB state
+    assert response.status_code == 200
+    assert b'A confirmation email has been sent' in response.data
+    with app.app_context():
+        subscriber = Subscriber.query.filter_by(email='new.subscriber@example.com').first()
+        assert subscriber is not None
+        assert subscriber.confirmed is False # IMPORTANT: They are not yet confirmed
+        confirmation_token = subscriber.token
+
+    # Action 2: User clicks the confirmation link from their email
+    response = client.get(f'/confirm-subscription/{confirmation_token}', follow_redirects=True)
+
+    # Assert 2: Check for success message and updated DB state
+    assert response.status_code == 200
+    assert b'Thank you for confirming your subscription!' in response.data
+    with app.app_context():
+        subscriber = Subscriber.query.filter_by(email='new.subscriber@example.com').first()
+        assert subscriber.confirmed is True # They are now confirmed
