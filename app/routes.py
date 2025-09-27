@@ -351,27 +351,31 @@ def about():
     """Displays the about page."""
     return render_template('about.html', title='About')
 
-# === NEWSLETTER SUBSCRIBE ROUTE ===
+# === NEWSLETTER SUBSCRIBE ROUTE (UPDATED) ===
 @bp.route('/subscribe', methods=['POST'])
 def subscribe():
     """Handles newsletter subscription form submission."""
     form = SubscriptionForm()
     if form.validate_on_submit():
         email = form.email.data.lower()
-        subscriber = Subscriber(email=email)
-        try:
-            db.session.add(subscriber)
-            db.session.commit()
-            flash('Thank you for subscribing!', 'success')
-            current_app.logger.info(f"New newsletter subscriber: {email}")
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error adding subscriber {email}: {e}",
-                                     exc_info=True)
-            if 'UNIQUE constraint failed' in str(e):
+        existing_subscriber = db.session.scalar(sa.select(Subscriber).filter_by(email=email))
+
+        if existing_subscriber:
+            if existing_subscriber.confirmed:
                 flash('This email address is already subscribed.', 'info')
             else:
-                flash('An error occurred. Please try again.', 'danger')
+                # Resend confirmation if they exist but are not confirmed
+                send_subscription_confirmation_email(existing_subscriber)
+                flash('A new confirmation email has been sent. Please check your inbox.', 'success')
+        else:
+            # Create a new, unconfirmed subscriber
+            token = secrets.token_urlsafe(16)
+            new_subscriber = Subscriber(email=email, token=token, confirmed=False)
+            db.session.add(new_subscriber)
+            db.session.commit()
+            send_subscription_confirmation_email(new_subscriber)
+            flash('A confirmation email has been sent. Please check your inbox to complete your subscription.', 'success')
+
     else:
         if form.email.errors:
             for error in form.email.errors:
@@ -379,6 +383,24 @@ def subscribe():
 
     return redirect(request.referrer or url_for('main.index'))
 
+
+# === Confirm Subscription ===
+@bp.route('/confirm-subscription/<token>')
+def confirm_subscription(token):
+    """Handles the confirmation token from the subscriber's email."""
+    subscriber = db.session.scalar(sa.select(Subscriber).filter_by(token=token))
+
+    if subscriber:
+        if subscriber.confirmed:
+            flash('Your subscription is already active!', 'info')
+        else:
+            subscriber.confirmed = True
+            db.session.commit()
+            flash('Thank you for confirming your subscription!', 'success')
+    else:
+        flash('The confirmation link is invalid or has expired.', 'danger')
+
+    return redirect(url_for('main.index'))
 
 # === Authentication Routes ===
 
@@ -1109,3 +1131,26 @@ def set_cookie_consent():
     response.set_cookie('cookie_consent', consent, max_age=31536000,
                         samesite='Lax')
     return response
+
+# === Helper function to send subscription confirmation email ===
+def send_subscription_confirmation_email(subscriber):
+    """Generates a confirmation token and sends the email."""
+    token = subscriber.token
+    msg = Message(
+        subject=f"[{current_app.config.get('BLOG_NAME')}] Please Confirm Your Subscription",
+        sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
+        recipients=[subscriber.email]
+    )
+    msg.body = f"""Dear reader,
+
+    Thank you for your interest in {current_app.config.get('BLOG_NAME')}!
+
+    To confirm your subscription and start receiving updates, please click the following link:
+    {url_for('main.confirm_subscription', token=token, _external=True)}
+
+    If you did not request this subscription, please ignore this email.
+
+    Sincerely,
+    The Liquid Blossom Team
+    """
+    mail.send(msg)
