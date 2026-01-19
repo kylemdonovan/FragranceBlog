@@ -7,3 +7,10 @@ instance/
 .env
 *.log
 **/.DS_Store
+.env.save
+.DS_Store
+.idea/
+*.sock
+.flaskenv
+venv/
+

@@ -1,7 +1,8 @@
 # app/__init__.py
 
 import os
-from flask import Flask, Markup
+from flask import Flask
+from markupsafe import Markup
 import re # Import the regular expression module
 from config import Config
 from .extensions import db, migrate, login, csrf, mail, limiter

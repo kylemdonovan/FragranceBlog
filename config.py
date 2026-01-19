@@ -2,8 +2,8 @@ import os
 from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-local_db_path = os.path.join(r"C:\Users\kd2kr\Desktop\fragranceblog",
-                             'instance', 'app.db')
+local_db_path = os.path.join(basedir, 'instance', 'app.db')
+
 load_dotenv(os.path.join(basedir, '.env'))
 
 
@@ -11,7 +11,6 @@ class Config:
     # --- CORE SETTINGS ---
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-should-really-change-this'
 
-    # This line safely uses the Render Postgres DB in production OR your local absolute path.
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'sqlite:///' + local_db_path
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -35,20 +34,20 @@ class Config:
     MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() in ('true', '1', 't')
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'admin@liquidblossom.com'
     ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL')
-
+    
     # --- COOKIES ---
-    # These settings are hardcoded to True because the application should
-    # only ever be run over HTTPS in production :) .
-    SESSION_COOKIE_SECURE = True
+    # Now we read from os.environ
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True').lower() in ('true', '1', 't')
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-
-    REMEMBER_COOKIE_SECURE = True
+    
+    REMEMBER_COOKIE_SECURE = os.environ.get('REMEMBER_COOKIE_SECURE', 'True').lower() in ('true', '1', 't')
     REMEMBER_COOKIE_HTTPONLY = True
-    # REMEMBER_COOKIE_SAMESITE is not a standard Flask config, but does no harm.
-    REMEMBER_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_SAMESITE = 'Lax'	
+
+
 
     # --- APP SPECIFIC SETTINGS ---
     BLOG_NAME = os.environ.get('BLOG_NAME', 'My Fragrance Blog')
