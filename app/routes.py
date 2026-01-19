@@ -1,10 +1,10 @@
 import secrets
-from flask import make_response, jsonify
+from flask import make_response, jsonify, request
 from datetime import datetime, timezone
 from flask_mail import Message
 from app import mail, limiter, db
 from feedgen.feed import FeedGenerator
-from flask import Response, send_from_directory
+from flask import Response, send_from_directory,
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ReplyForm,
                        ContactForm, RequestPasswordResetForm,
                        ResetPasswordForm, ChangePasswordForm, EditCommentForm,
@@ -363,27 +363,36 @@ def subscribe():
 
         if existing_subscriber:
             if existing_subscriber.confirmed:
-                flash('This email address is already subscribed.', 'info')
+                msg = 'This email address is already subscribed.'
+                category = 'info'
             else:
-                # Resend confirmation if they exist but are not confirmed
                 send_subscription_confirmation_email(existing_subscriber)
-                flash('A new confirmation email has been sent. Please check your inbox.', 'success')
+                msg = 'A new confirmation email has been sent. Please check your inbox.'
+                category = 'success'
         else:
-            # Create a new, unconfirmed subscriber
             token = secrets.token_urlsafe(16)
             new_subscriber = Subscriber(email=email, token=token, confirmed=False)
             db.session.add(new_subscriber)
             db.session.commit()
             send_subscription_confirmation_email(new_subscriber)
-            flash('A confirmation email has been sent. Please check your inbox to complete your subscription.', 'success')
+            msg = 'A confirmation email has been sent. Please check your inbox.'
+            category = 'success'
 
-    else:
-        if form.email.errors:
-            for error in form.email.errors:
-                flash(error, 'danger')
+        # SPREZZATURA: Check for AJAX to avoid the "Vibration"
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'success', 'message': msg})
 
+        flash(msg, category)
+        return redirect(url_for('main.index'))
+
+    # If form validation fails
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        errors = [error for field in form.errors.values() for error in field]
+        return jsonify({'status': 'error', 'message': errors[0] if errors else 'Invalid entry.'}), 400
+
+    for error in form.email.errors:
+        flash(error, 'danger')
     return redirect(request.referrer or url_for('main.index'))
-
 
 # === Confirm Subscription ===
 @bp.route('/confirm-subscription/<token>')

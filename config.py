@@ -9,6 +9,8 @@ load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
     # --- CORE SETTINGS ---
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI') or 'redis://localhost:6379'
+
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-should-really-change-this'
 
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \

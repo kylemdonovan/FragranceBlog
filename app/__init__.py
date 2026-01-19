@@ -7,8 +7,11 @@ import re # Import the regular expression module
 from config import Config
 from .extensions import db, migrate, login, csrf, mail, limiter
 import cloudinary
-
+from flask_wtf.csrf import CSRFError
 from .context_processors import inject_sidebar_data
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+limiter = Limiter(key_func=get_remote_address, default_limits = ["200 per day", "50 per hour"])
 
 def create_app(config_class=Config):
     """The application factory."""
@@ -26,16 +29,22 @@ def create_app(config_class=Config):
     login.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
+    limiter.storage_uri = app.config.get('RATELIMIT_STORAGE_URI')    
     limiter.init_app(app)
 
-    # --- Custom Highlight Filter ---
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        # Instead of an ugly error page :(, redirect home with a message (It's coming home)
+        flash("Your session timed out. Please try subscribing again.", "info")
+        return redirect(url_for('main_index'))
+        # --- Custom Highlight Filter ---
     def highlight(text, query):
         """
         A custom Jinja2 filter to highlight a search query in a block of text.
         """
         if not query:
             return text
-        # Use a case-insensitive REGEX!!! to find the query and wrap it in <mark> tags
+        # Use case-insensitive REGEX AH!!! to find the query and wrap it in <mark> tags
         # Markup() is used to prevent Jinja from auto-escaping the HTML blah
         return Markup(re.sub(f'({re.escape(query)})', r'<mark>\1</mark>', text, flags=re.IGNORECASE))
 
