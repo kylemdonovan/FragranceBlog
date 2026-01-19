@@ -314,7 +314,8 @@
         declineBtn.addEventListener('click', () => setConsent(false));
     });
     </script>
-    <script>
+
+    <script nonce="{{csp_nonce() }}">
         document.addEventListener('DOMContentLoaded', function() {
             const subForm = document.getElementById('subscribe-form');
             const subMsg = document.getElementById('subscribe-message');

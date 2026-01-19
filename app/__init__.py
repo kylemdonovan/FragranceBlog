@@ -36,8 +36,7 @@ def create_app(config_class=Config):
             "'self'",
             'https://cdn.jsdelivr.net',
             'https://www.google.com/recaptcha/',
-            'https://www.gstatic.com/recaptcha/',
-            "'unsafe-inline'"
+            'https://www.gstatic.com/recaptcha/'
         ],
         'style-src': [
             "'self'",
@@ -54,7 +53,7 @@ def create_app(config_class=Config):
         'img-src': ["'self'", 'data:', 'https://res.cloudinary.com']
     }
 
-    Talisman(app, content_security_policy=csp, force_https=False)
+    Talisman(app, content_security_policy=csp, content_security_policy_nonce_in=['script-src'], force_https=False)
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
