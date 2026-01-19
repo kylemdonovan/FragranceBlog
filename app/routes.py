@@ -1,10 +1,9 @@
 import secrets
-from flask import make_response, jsonify, request
+from flask import make_response, jsonify, request, Response, send_from_directory
 from datetime import datetime, timezone
 from flask_mail import Message
 from app import mail, limiter, db
 from feedgen.feed import FeedGenerator
-from flask import Response, send_from_directory,
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ReplyForm,
                        ContactForm, RequestPasswordResetForm,
                        ResetPasswordForm, ChangePasswordForm, EditCommentForm,

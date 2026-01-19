@@ -314,5 +314,47 @@
         declineBtn.addEventListener('click', () => setConsent(false));
     });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const subForm = document.getElementById('subscribe-form');
+            const subMsg = document.getElementById('subscribe-message');
+
+            if (subForm) {
+                subForm.addEventListener('submit', async function(e) {
+                    e.preventDefault(); // This is the specific line that stops the "vibration"
+                
+                    const formData = new FormData(subForm);
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                    try {
+                        const response = await fetch(subForm.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': csrfToken
+                            }
+                        });
+
+                        const data = await response.json();
+                    
+                        if (subMsg) {
+                            subMsg.innerText = data.message;
+                            subMsg.style.display = 'block';
+                            // Styles the text green for success or red for errors
+                            subMsg.className = data.status === 'success' ? 'mt-2 text-success' : 'mt-2 text-danger';
+                        }
+
+                        if (response.ok && data.status === 'success') {
+                            subForm.reset(); // Clears the email field
+                        }
+                    } catch (error) {
+                        console.error('Subscription Error:', error);
+                    }
+                });
+            }
+        });
+    </script>
+
     </body>
 </html>
