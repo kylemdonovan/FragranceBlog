@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2 class="mb-4">My Account Settings</h2>
+
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h4 class="mb-0">Change Username</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="">
+                    {{ username_form.hidden_tag() }}
+                    <div class="form-floating mb-3">
+                        {{ username_form.new_username(class="form-control" + (" is-invalid" if username_form.new_username.errors else ""), placeholder="New Username") }}
+                        {{ username_form.new_username.label(class="form-label") }}
+                        {% if username_form.new_username.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in username_form.new_username.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {{ username_form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Danger Zone: Delete Account</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Deleting your account is permanent and cannot be undone. All of your comments will be removed.</p>
+                <form method="POST" action="">
+                    {{ delete_form.hidden_tag() }}
+                    <div class="form-floating mb-3">
+                        {{ delete_form.confirm_password(class="form-control" + (" is-invalid" if delete_form.confirm_password.errors else ""), placeholder="Confirm Password") }}
+                        {{ delete_form.confirm_password.label(class="form-label") }}
+                         {% if delete_form.confirm_password.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in delete_form.confirm_password.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {{ delete_form.submit_delete(class="btn btn-outline-danger") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

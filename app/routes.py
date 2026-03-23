@@ -1,4 +1,5 @@
 import secrets
+import bleach
 from flask import make_response, jsonify, request, Response, send_from_directory
 from datetime import datetime, timezone
 from flask_mail import Message
@@ -7,7 +8,7 @@ from feedgen.feed import FeedGenerator
 from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, ReplyForm,
                        ContactForm, RequestPasswordResetForm,
                        ResetPasswordForm, ChangePasswordForm, EditCommentForm,
-                       SubscriptionForm, ChangeUsernameForm)
+                       SubscriptionForm, ChangeUsernameForm, DeleteAccountForm)
 
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
@@ -218,6 +219,9 @@ def post(slug):
             flash('You must be logged in to comment.', 'warning')
             return redirect(url_for('main.login', next=request.url))
 
+        # bleach to stop malicious tags
+        clean_body = bleach.clean(comment_form.body.data)
+
         comment = Comment(body=comment_form.body.data,
                           commenter=current_user,
                           post=post_obj)
@@ -253,28 +257,42 @@ def post(slug):
                            related_posts=related_posts)
 
 # === Public User Registration Route ===
-
 @bp.route('/signup', methods=['GET', 'POST'])
 @limiter.limit("5 per hour")
 def signup():
-    """Handles public user registration and sends confirmation email."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = RegistrationForm()
-    # 'form.validate_on_submit()' now handles the ReCaptcha check automatically.
     if form.validate_on_submit():
+        # Check if they are already a confirmed subscriber
+        subscriber = db.session.scalar(
+            sa.select(Subscriber).filter_by(email=form.email.data.lower()))
+        auto_confirm = subscriber is not None and subscriber.confirmed
+
         user = User(
             username=form.username.data,
-            email=form.email.data,
-            is_admin=False, # This is a righteous default
-            confirmed=False
+            email=form.email.data.lower(),
+            is_admin=False,
+            confirmed=auto_confirm
         )
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        send_confirmation_email(user)
-        flash('A confirmation email has been sent. Please check your inbox.', 'success')
-        return redirect(url_for('main.login'))
+
+        if auto_confirm:
+            user.confirmed_on = datetime.utcnow()
+            db.session.commit()
+            flash(
+                'Account created! Your email was automatically verified from your newsletter subscription.',
+                'success')
+            return redirect(url_for('main.login'))
+        else:
+            send_confirmation_email(user)
+            flash(
+                'A confirmation email has been sent. Please check your inbox.',
+                'success')
+            return redirect(url_for('main.login'))
+
     return render_template('signup.html', title='Sign Up', form=form)
 
 
@@ -412,28 +430,22 @@ def confirm_subscription(token):
     return redirect(url_for('main.index'))
 
 # === Authentication Routes ===
-
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("20 per minute") # Increased from 5 to prevent false lockouts
 def login():
-    """Handles user login, now with a check for email confirmation."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = db.session.scalar(
-            sa.select(User).where(User.username == form.username.data)
-        )
+        user = db.session.scalar(sa.select(User).where(User.username == form.username.data))
 
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password.', 'danger')
             return redirect(url_for('main.login'))
 
         if not user.confirmed:
-            flash(
-                'Your account is not yet confirmed. Please check your email for a confirmation link.',
-                'warning')
+            flash('Your account is not yet confirmed. Please check your email for a confirmation link.', 'warning')
             return redirect(url_for('main.login'))
 
         login_user(user, remember=form.remember_me.data)
@@ -629,6 +641,32 @@ def register():
     return render_template('register.html', title='Register New User',
                            form=form)
 
+
+@bp.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+    """Allows standard users to change their username or delete their account."""
+    username_form = ChangeUsernameForm(current_user.username)
+    delete_form = DeleteAccountForm()
+
+    if 'submit' in request.form and username_form.validate_on_submit():
+        original_username = current_user.username
+        current_user.username = username_form.new_username.data
+        db.session.commit()
+        flash(f'Username successfully changed from "{original_username}" to "{current_user.username}".', 'success')
+        return redirect(url_for('main.account'))
+
+    if 'submit_delete' in request.form and delete_form.validate_on_submit():
+        if current_user.check_password(delete_form.confirm_password.data):
+            db.session.delete(current_user)
+            db.session.commit()
+            flash('Your account has been successfully deleted.', 'info')
+            return redirect(url_for('main.index'))
+        else:
+            flash('Incorrect password. Account deletion failed.', 'danger')
+
+    return render_template('account.html', title='My Account',
+                           username_form=username_form, delete_form=delete_form)
 
 # === Admin Routes ===
 @bp.route('/admin')

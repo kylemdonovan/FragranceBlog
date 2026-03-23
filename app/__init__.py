@@ -1,6 +1,8 @@
 # app/__init__.py
 
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, flash, redirect, url_for
 from markupsafe import Markup
 import re
@@ -81,5 +83,22 @@ def create_app(config_class=Config):
         from . import routes
         app.register_blueprint(routes.bp)
         from . import models
+
+        # --- ADD THE LOGGING CONFIGURATION HERE ---
+        if not app.debug and not app.testing:
+            if not os.path.exists('logs'):
+                os.mkdir('logs')
+
+            # Max 10MB per file, keep the last 10 backups
+            file_handler = RotatingFileHandler('logs/fragrance_blog.log',
+                                               maxBytes=10240000,
+                                               backupCount=10)
+            file_handler.setFormatter(logging.Formatter(
+                '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+
+            file_handler.setLevel(logging.INFO)
+            app.logger.addHandler(file_handler)
+            app.logger.setLevel(logging.INFO)
+            app.logger.info('Fragrance Blog startup')
 
     return app
