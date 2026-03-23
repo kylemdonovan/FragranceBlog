@@ -195,14 +195,17 @@ def post(slug):
     reply_form = ReplyForm()
 
     # --- Logic to handle a new REPLY submission ---
-    if reply_form.validate_on_submit() and 'submit_reply' in request.form: # Check which form was submitted
+    if reply_form.validate_on_submit() and 'submit_reply' in request.form:
         if not current_user.is_authenticated:
             flash('You must be logged in to reply.', 'warning')
             return redirect(url_for('main.login', next=request.url))
 
         parent_comment = db.session.get(Comment, int(reply_form.parent_id.data))
         if parent_comment:
-            reply = Comment(body=reply_form.body.data,
+            # FIX: Bleach the reply input to stop malicious tags
+            clean_reply_body = bleach.clean(reply_form.body.data)
+
+            reply = Comment(body=clean_reply_body,
                             commenter=current_user,
                             post=post_obj,
                             parent=parent_comment)
@@ -211,10 +214,11 @@ def post(slug):
             flash('Your reply has been posted.', 'success')
         else:
             flash('Parent comment not found.', 'danger')
-        return redirect(url_for('main.post', slug=post_obj.slug, _anchor=f'comment-{parent_comment.id}'))
+        return redirect(url_for('main.post', slug=post_obj.slug,
+                                _anchor=f'comment-{parent_comment.id}'))
 
     # --- Logic to handle a new top-level COMMENT submission ---
-    if comment_form.validate_on_submit() and 'submit_comment' in request.form: # Check which form was submitted
+    if comment_form.validate_on_submit() and 'submit_comment' in request.form:
         if not current_user.is_authenticated:
             flash('You must be logged in to comment.', 'warning')
             return redirect(url_for('main.login', next=request.url))
@@ -222,38 +226,41 @@ def post(slug):
         # bleach to stop malicious tags
         clean_body = bleach.clean(comment_form.body.data)
 
-        comment = Comment(body=comment_form.body.data,
+        comment = Comment(body=clean_body,
                           commenter=current_user,
                           post=post_obj)
         db.session.add(comment)
         db.session.commit()
         flash('Your comment has been published.', 'success')
-        return redirect(url_for('main.post', slug=post_obj.slug, _anchor=f'comment-{comment.id}'))
+        return redirect(url_for('main.post', slug=post_obj.slug,
+                                _anchor=f'comment-{comment.id}'))
 
     # --- Paginate top-level comments ---
     page = request.args.get('page', 1, type=int)
-    per_page = 5 # Comments per page
-    comments_query = post_obj.comments.filter(Comment.parent_id.is_(None)).order_by(Comment.timestamp.asc())
-    comment_pagination = db.paginate(comments_query, page=page, per_page=per_page, error_out=False)
+    per_page = 5  # Comments per page
+    comments_query = post_obj.comments.filter(
+        Comment.parent_id.is_(None)).order_by(Comment.timestamp.asc())
+    comment_pagination = db.paginate(comments_query, page=page,
+                                     per_page=per_page, error_out=False)
     top_level_comments = comment_pagination.items
 
-    # Simple related posts query (can be improved later)
+    # Simple related posts query
     related_posts = []
     if post_obj.tags:
-        # Get the first tag and find other posts with it
         first_tag = post_obj.tags[0]
         related_posts = db.session.scalars(
             sa.select(Post)
             .join(Post.tags)
-            .where(Tag.id == first_tag.id, Post.id != post_obj.id, Post.status == True)
+            .where(Tag.id == first_tag.id, Post.id != post_obj.id,
+                   Post.status == True)
             .order_by(Post.published_at.desc())
             .limit(3)
         ).all()
 
-
     return render_template('post.html', title=post_obj.title, post=post_obj,
                            comment_form=comment_form, reply_form=reply_form,
-                           comments=top_level_comments, comment_pagination=comment_pagination,
+                           comments=top_level_comments,
+                           comment_pagination=comment_pagination,
                            related_posts=related_posts)
 
 # === Public User Registration Route ===
@@ -956,7 +963,10 @@ def edit_comment(comment_id):
 
     form = EditCommentForm()
     if form.validate_on_submit():
-        comment.body = form.body.data
+        # FIX: Bleach the edited input before saving it to the database
+        clean_edit_body = bleach.clean(form.body.data)
+        comment.body = clean_edit_body
+
         try:
             db.session.commit()
             flash('Your comment has been updated.', 'success')
