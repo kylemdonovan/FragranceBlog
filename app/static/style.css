@@ -168,3 +168,13 @@ a:hover {
     margin-left: 8px;
     vertical-align: middle;
 }
+
+/* Fix for Autofill White Box in Dark/Light Mode */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-color) inset !important;
+    -webkit-text-fill-color: var(--text-color) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
