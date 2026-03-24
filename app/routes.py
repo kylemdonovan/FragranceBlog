@@ -1,5 +1,6 @@
 import secrets
 import bleach
+
 from flask import make_response, jsonify, request, Response, send_from_directory
 from datetime import datetime, timezone
 from flask_mail import Message
@@ -9,6 +10,8 @@ from app.forms import (LoginForm, RegistrationForm, PostForm, CommentForm, Reply
                        ContactForm, RequestPasswordResetForm,
                        ResetPasswordForm, ChangePasswordForm, EditCommentForm,
                        SubscriptionForm, ChangeUsernameForm, DeleteAccountForm)
+from threading import Thread
+from flask import copy_current_request_context
 
 # --- Core Flask & Extension Imports ---
 from flask import (render_template, flash, redirect, url_for, request,
@@ -30,6 +33,9 @@ import cloudinary.uploader
 bp = Blueprint('main', __name__)
 
 # === Helper Functions ===
+def send_async_email(app, msg):
+    with app.app_context():
+        mail.send(msg)
 
 # --- Decorator for Admin Routes ---
 def admin_required(f):
@@ -68,7 +74,7 @@ If you did not sign up for an account, please ignore this email.
 Sincerely,
 The Liquid Blossom Team
 """
-    mail.send(msg)
+    Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
 def upload_to_cloudinary(file_to_upload):
     """
@@ -180,7 +186,6 @@ def index():
                            next_url=next_url, prev_url=prev_url,
                            pagination=pagination)
 
-
 @bp.route('/post/<string:slug>', methods=['GET', 'POST'])
 def post(slug):
     """Displays a single post and handles comment and reply submissions."""
@@ -200,9 +205,14 @@ def post(slug):
             flash('You must be logged in to reply.', 'warning')
             return redirect(url_for('main.login', next=request.url))
 
+        # --- TRAP BOT REPLIES ---
+        if reply_form.honeypot.data:
+            current_app.logger.warning(f"Bot trap triggered on reply by user {current_user.username}")
+            flash('Your reply has been posted.', 'success') # Fake success
+            return redirect(url_for('main.post', slug=post_obj.slug))
+
         parent_comment = db.session.get(Comment, int(reply_form.parent_id.data))
         if parent_comment:
-            # FIX: Bleach the reply input to stop malicious tags
             clean_reply_body = bleach.clean(reply_form.body.data)
 
             reply = Comment(body=clean_reply_body,
@@ -223,7 +233,12 @@ def post(slug):
             flash('You must be logged in to comment.', 'warning')
             return redirect(url_for('main.login', next=request.url))
 
-        # bleach to stop malicious tags
+        # --- TRAP BOT COMMENTS ---
+        if comment_form.honeypot.data:
+            current_app.logger.warning(f"Bot trap triggered on comment by user {current_user.username}")
+            flash('Your comment has been published.', 'success') # Fake success
+            return redirect(url_for('main.post', slug=post_obj.slug))
+
         clean_body = bleach.clean(comment_form.body.data)
 
         comment = Comment(body=clean_body,
@@ -348,7 +363,7 @@ def contact():
         Reply directly to {sender_email}.
         """
         try:
-            mail.send(msg)
+            Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
             current_app.logger.info(
                 f"Contact form email sent from {sender_email} to {admin_email_recipient}")
             flash(
@@ -544,7 +559,8 @@ The Blog Team
 """
     try:
         if current_app.config.get('MAIL_SERVER'):
-            mail.send(msg)
+            Thread(target=send_async_email,
+                   args=(current_app._get_current_object(), msg)).start()
             current_app.logger.info(
                 f"Password reset email successfully sent to {user_obj.email}")
         else:
@@ -1210,4 +1226,4 @@ def send_subscription_confirmation_email(subscriber):
     Sincerely,
     The Liquid Blossom Team
     """
-    mail.send(msg)
+    Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()

@@ -12,6 +12,17 @@ from better_profanity import profanity
 # Initialize the default wordlist (includes l33t speak variations)
 profanity.load_censor_words()
 
+class CommentForm(FlaskForm):
+    body = TextAreaField('Your Comment', validators=[DataRequired(), Length(min=1, max=500)])
+    honeypot = StringField('Leave this empty')
+    submit_comment = SubmitField('Submit Comment')
+
+class ReplyForm(FlaskForm):
+    body = TextAreaField('Your Reply', validators=[DataRequired(), Length(min=1, max=500)])
+    parent_id = HiddenField('Parent ID', validators=[DataRequired()])
+    honeypot = StringField('Leave this empty')
+    submit_reply = SubmitField('Submit Reply')
+
 def contains_profanity(text):
     """Checks string against the better_profanity library."""
     return profanity.contains_profanity(text)
